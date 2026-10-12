@@ -38,7 +38,7 @@ ANSWERABLE = [
     ("Why does groupby plus mean not give a two-column table?", "reset_index"),
     ("What happened to the loss when the learning rate was set to 1.0?", "10^35"),
     ("How similar were the cat and kitten sentences?", "0.6253"),
-    ("Why did escaping the closing tag not not help in the injection test?".replace("not not", "not"), "escaping tags gave no measurable gain"),
+    ("Why did escaping the closing tag not help in the injection test?", "escaping tags gave no measurable gain"),
     ("What signals that a structured output was cut off?", "MAX_TOKENS"),
 ]
 
@@ -47,6 +47,17 @@ UNANSWERABLE = [
     "How do I configure a Kubernetes ingress controller?",
     "Who won the 2018 football World Cup?",
     "What does Azure Cosmos DB cost per month?",
+]
+
+
+# Sound answerable from the notes but are not: the notes never give these facts (verified against the corpus).
+# Abstaining on far-off questions proves little; these are the informative abstention tests.
+NEAR_MISS = [
+    "How many parameters does the all-MiniLM-L6-v2 embedding model have?",
+    "What recall did HNSW reach with ef_search set to 500?",
+    "What name did the model give at temperature 3.0?",
+    "What was the p95 latency of the Gemini API calls?",
+    "How did the one-shot prompt perform on the name-format task?",
 ]
 
 

@@ -3,9 +3,9 @@
 A document Q&A system in the style of NotebookLM: upload documents, ask questions, get answers
 with citations to the exact passages - and abstention when the documents don't contain the answer.
 
-> Status: **early build (Week 8 of a 16-week plan).** Ingestion, retrieval and a retrieval
-> evaluation harness exist. Generation, the API, the agent layer, the .NET backend and the UI do not yet.
-> This README only claims what is built.
+> Status: **early build (Week 8 of a 16-week plan).** Ingestion, retrieval, grounded generation with
+> verified citations, and two evaluation harnesses exist. The API, the agent layer, the .NET backend and
+> the UI do not yet. This README only claims what is built.
 
 ## Planned architecture
 
@@ -20,7 +20,7 @@ Gemini API + local embeddings + Chroma
 ```
 
 Everything is designed to run on free tiers and a laptop (8 GB RAM). See [docs/architecture.md](docs/architecture.md)
-for the design decisions and why each was made.
+for the design decisions, the evidence behind each, and what that evidence does *not* show.
 
 ## What exists today
 
@@ -29,21 +29,25 @@ for the design decisions and why each was made.
 | Structure-aware chunking under the embedding model's token limit | `ai-service/app/chunking.py` | built, tested |
 | Local embeddings (`all-MiniLM-L6-v2`) | `ai-service/app/embeddings.py` | built |
 | Chroma vector store | `ai-service/app/store.py` | built |
+| Grounded generation: numbered sources, citations verified in code, abstention | `ai-service/app/generation.py` | built, evaluated on a small set |
 | Retrieval evaluation with error analysis | `ai-service/evals/retrieval_eval.py` | built |
-| Answer generation with citations and abstention | - | next |
+| End-to-end generation evaluation (retrieval vs. generation failures) | `ai-service/evals/generation_eval.py` | built; **saturated, needs a harder set** |
+| Reranking, hybrid search | - | next |
 | FastAPI service | - | next |
 
-## Run the retrieval evaluation
+## Run
 
 ```bash
 cd ai-service
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python -m evals.retrieval_eval
 .venv\Scripts\python -m pytest
+.venv\Scripts\python -m evals.retrieval_eval
 ```
 
-No API key is needed for ingestion, retrieval or the evaluation.
+The retrieval evaluation and the tests need no API key. The generation evaluation calls Gemini
+(about 25 requests): copy `.env.example` to `ai-service/.env`, set `GEMINI_API_KEY`, then run
+`.venv\Scripts\python -m evals.generation_eval`.
 
 ## Background
 
