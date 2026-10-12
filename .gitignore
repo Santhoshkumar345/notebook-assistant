@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Local data and secrets
+ai-service/data/
+.env
+.env.local
+!.env.example
+*.key
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Planned .NET and Angular parts
+bin/
+obj/
+node_modules/
+dist/
