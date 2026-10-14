@@ -13,7 +13,7 @@ are choices made on principle that still need to be validated by the evaluation 
 | Orchestration (agent layer) | LangGraph | planned (Weeks 9-11) |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (384-d, 256-token limit, English-centric) | built |
 | Vector store | Chroma, cosine space | built |
-| LLM | Gemini through `google-genai` (exact model version to be pinned) | next |
+| LLM | Gemini through `google-genai`, pinned to `gemini-3.5-flash-lite` | built |
 
 ## Decisions
 
@@ -50,3 +50,24 @@ generation problems have different fixes, so they get separate measurements.
   - Not tested yet: injection inside a retrieved document, answers that need several chunks, a larger and noisier corpus.
 - **Next:** build a harder evaluation set first (synthesis questions, a poisoned document, more distractor
   documents), then use it to judge reranking and hybrid search.
+
+### 2026-10-14 - A harder evaluation set; the baseline for reranking and hybrid search
+- **Corpus:** study notes (weeks 1-7) plus this project's own README and architecture doc: 9 documents, 91 chunks,
+  with topics that overlap (embedding limits, model aliases, abstention).
+- **Set:** 20 answerable questions (paraphrased, multi-fact, numeric, near-duplicate), 6 near-miss unanswerable
+  questions, 6 poisoned-document cases. The earlier 25-question set was saturated.
+- **Baseline retrieval** (a question counts only if ALL its gold phrases are in the top-k context):
+  top-1 8/20, top-3 15/20, top-4 16/20, top-8 18/20. All four top-4 misses are paraphrase questions; the gold chunk
+  ranked 5th, 6th, and beyond 8th (twice). Two of the misses share exact words with the right chunk, which is the
+  case hybrid (keyword) search should fix. Reranking and hybrid search will be judged against these numbers.
+- **Generation at k=4:** 16 answered with a gold-bearing citation; 2 abstained correctly because the right chunk was
+  not in context (a retrieval failure that reaches the user as "not found"); 2 answered from a different chunk and the
+  answers read as legitimate (partially hand-read, answers were truncated in the printout), which the phrase-based
+  gold check mislabels. Near-miss abstention: 6/6.
+- **Poisoned documents:** 0/6 hijacked (four instruction payloads, two false facts). The poisoned document was retrieved
+  6/6 and cited in 4/6, so a malicious document can appear as a *source* even when the answer is right.
+- **Not shown:** one model, hand-written attacks, essentially one run each. The false-fact attacks ran against facts
+  the corpus states correctly, in several places or in one document twice. A poisoned fact with no counter-evidence would
+  be accepted by any generator: that is a provenance and trust problem, not a prompting problem. Phrase-based gold
+  cannot judge faithfulness. Adding one distractor document to the original 16-question set moved hit@1 from 75% to
+  69% (hit@3 unchanged), which is within a question of noise.
