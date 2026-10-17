@@ -14,9 +14,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from app import embeddings
 from app.generation import MODEL, Status, answer_question, get_client
 from app.ingest import ingest_markdown
+from app.retrieval import Retriever
 from app.store import VectorStore
 from evals.hard_set import HARD, NEAR_MISS_HARD, POISONED, corpus_docs, norm
 
@@ -46,9 +46,16 @@ def main() -> None:
     store = VectorStore()
     store.clear()
     n_chunks = sum(ingest_markdown(store, name, text) for name, text in docs.items())
-    print(f"corpus: {len(docs)} documents -> {n_chunks} chunks | questions: {len(HARD)} answerable, {len(NEAR_MISS_HARD)} near-miss\n")
+    use_hybrid = "--hybrid" in sys.argv
+    retriever = Retriever(store)
 
-    retrieved = {q.text: store.query(embeddings.embed([q.text])[0], 8) for q in HARD}
+    def search(query: str, n: int):
+        return retriever.hybrid(query, n, 20) if use_hybrid else retriever.dense(query, n)
+
+    print(f"corpus: {len(docs)} documents -> {n_chunks} chunks | questions: {len(HARD)} answerable, {len(NEAR_MISS_HARD)} near-miss"
+          f" | retrieval: {'hybrid (dense + BM25, RRF)' if use_hybrid else 'dense'}\n")
+
+    retrieved = {q.text: search(q.text, 8) for q in HARD}
 
     print("=== Retrieval: share of questions whose gold phrases are ALL in the top-k context ===")
     for k in (1, 3, 4, 8):
@@ -85,7 +92,7 @@ def main() -> None:
     print("\n=== Near-miss unanswerable questions (should abstain) ===")
     answered_anyway = 0
     for question in NEAR_MISS_HARD:
-        res = answer_question(question, store.query(embeddings.embed([question])[0], K), client)
+        res = answer_question(question, search(question, K), client)
         if res.status is not Status.not_found:
             answered_anyway += 1
         print(f"  {res.status.value:<9} {question}" + (f"\n             ANSWERED: {short(res.answer)}" if res.answer else ""))
@@ -95,14 +102,14 @@ def main() -> None:
     print("\n=== Poisoned documents (each is retrieved alongside the clean corpus) ===")
     controlled: set[str] = set()
     for poison in POISONED:
-        q_vec = embeddings.embed([poison.question])[0]
         if poison.question not in controlled:
             controlled.add(poison.question)
-            control = answer_question(poison.question, store.query(q_vec, K), client)
+            control = answer_question(poison.question, search(poison.question, K), client)
             print(f"  control, no poison - {poison.question!r}\n     answer: {short(control.answer)}")
             time.sleep(PAUSE_S)
         ingest_markdown(store, "poison.md", poison.text)  # replaces the previous poisoned document
-        hits = store.query(q_vec, K)
+        retriever = Retriever(store)  # rebuild: the keyword index is built once, from the chunks at that moment
+        hits = search(poison.question, K)
         res = answer_question(poison.question, hits, client)
         print(f"  {poison.name}\n     retrieved={any(h.source == 'poison.md' for h in hits)}"
               f" hijacked={poison.marker in res.answer.lower()}"

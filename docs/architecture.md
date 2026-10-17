@@ -13,6 +13,7 @@ are choices made on principle that still need to be validated by the evaluation 
 | Orchestration (agent layer) | LangGraph | planned (Weeks 9-11) |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (384-d, 256-token limit, English-centric) | built |
 | Vector store | Chroma, cosine space | built |
+| Retrieval | dense (Chroma) + BM25 (`rank-bm25`) fused with Reciprocal Rank Fusion; optional cross-encoder rerank | built |
 | LLM | Gemini through `google-genai`, pinned to `gemini-3.5-flash-lite` | built |
 
 ## Decisions
@@ -71,3 +72,30 @@ generation problems have different fixes, so they get separate measurements.
   be accepted by any generator: that is a provenance and trust problem, not a prompting problem. Phrase-based gold
   cannot judge faithfulness. Adding one distractor document to the original 16-question set moved hit@1 from 75% to
   69% (hit@3 unchanged), which is within a question of noise.
+
+### 2026-10-17 - Retrieval: hybrid (dense + BM25, fused with RRF) by default; reranking optional
+Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chunks), latency on this laptop's CPU:
+
+| strategy | top-1 | top-3 | top-4 | ms/query |
+|---|---|---|---|---|
+| dense (baseline) | 9 | 15 | 16 | 13 |
+| keyword (BM25) only | 14 | 18 | 18 | <1 |
+| **hybrid (dense + BM25, RRF)** | 14 | 19 | **20** | 13 |
+| dense + rerank, pool 8 | 17 | 17 | 18 | 349 |
+| dense + rerank, pool 20 | 19 | 19 | 20 | 796 |
+| hybrid + rerank, pool 8 | 18 | 19 | 20 | 372 |
+| hybrid + rerank, pool 20 | 18 | 19 | 20 | 869 |
+
+- **Decision:** hybrid is the default. It reached the best top-4 completeness at the dense retriever's latency. A cross-encoder
+  reranker mainly improves top-1 precision (14 -> 18) at 350-870 ms per query on CPU, which is worth paying only if fewer chunks
+  are sent to the generator.
+- **Pool depth is the reranker's key parameter:** with a pool of 8 two of the four baseline misses stayed unrescued (their right chunk
+  was at dense rank 10 and 12, outside the pool); a pool of 20 rescued all four. A reranker cannot recover what is not in its pool.
+- **BM25 alone is risky:** 18/20 at top-4, but it regressed two questions that dense retrieval answered. Hybrid regressed none.
+- **End to end with hybrid retrieval:** 20/20 answered with a gold-bearing citation (dense: 16/20), 6/6 near-miss questions abstained,
+  0/6 poisoned documents hijacked an answer (the poisoned document was still cited in 4/6).
+- **Not shown:** the questions were written by the same author as the notes, so they share vocabulary with their sources, which probably
+  flatters keyword search. 20 questions is small, the corpus is tiny (a pool of 20 is a fifth of it), and top-4 is again at its ceiling,
+  so only top-1 still separates the strategies. Next: questions written independently of the notes.
+- **Process:** my first run of this comparison was wrong. `retrieve()` fetched `max(k, pool)` candidates, so "pool 8" and "pool 20"
+  both reranked 30 and the rows were identical. Spotted because identical rows and identical latency were implausible.

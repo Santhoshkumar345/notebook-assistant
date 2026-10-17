@@ -33,7 +33,8 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | Retrieval evaluation with error analysis (16 questions) | `ai-service/evals/retrieval_eval.py` | built |
 | First end-to-end evaluation (25 questions) | `ai-service/evals/generation_eval.py` | built; **saturated** |
 | Harder evaluation: 20 questions, near-miss negatives, poisoned documents | `ai-service/evals/hard_eval.py` | built; baseline for the next step |
-| Reranking, hybrid search | - | next |
+| Hybrid search (dense + BM25, RRF) and optional cross-encoder reranking | `ai-service/app/hybrid.py`, `rerank.py`, `retrieval.py` | built; hybrid is the default |
+| Retrieval strategy comparison on the harder set | `ai-service/evals/retrieval_compare.py` | built |
 | FastAPI service | - | next |
 
 ## Run

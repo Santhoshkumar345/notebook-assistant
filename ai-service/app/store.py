@@ -15,7 +15,8 @@ class Hit:
     source: str
     heading: str
     body: str
-    score: float  # cosine similarity (1 - distance); higher is more similar. Relative to the embedding model.
+    score: float  # meaning depends on the stage that produced it: cosine, BM25, fused rank score or cross-encoder logit
+    id: str = ""  # stable chunk id "<source>#<n>"; lets different retrievers be fused on identity
 
 
 class VectorStore:
@@ -57,6 +58,14 @@ class VectorStore:
             include=["documents", "metadatas", "distances"],
         )
         return [
-            Hit(meta["source"], meta["heading"], doc, 1.0 - dist)
-            for doc, meta, dist in zip(res["documents"][0], res["metadatas"][0], res["distances"][0])
+            Hit(meta["source"], meta["heading"], doc, 1.0 - dist, chunk_id)
+            for chunk_id, doc, meta, dist in zip(res["ids"][0], res["documents"][0], res["metadatas"][0], res["distances"][0])
+        ]
+
+    def all_hits(self) -> list[Hit]:
+        """Every stored chunk (score 0.0), e.g. to build a keyword index over the same chunks."""
+        res = self._col.get(include=["documents", "metadatas"])
+        return [
+            Hit(meta["source"], meta["heading"], doc, 0.0, chunk_id)
+            for chunk_id, doc, meta in zip(res["ids"], res["documents"], res["metadatas"])
         ]
