@@ -62,6 +62,20 @@ class VectorStore:
             for chunk_id, doc, meta, dist in zip(res["ids"][0], res["documents"][0], res["metadatas"][0], res["distances"][0])
         ]
 
+    def source_counts(self) -> dict[str, int]:
+        """Chunks per document, sorted by document name."""
+        counts: dict[str, int] = {}
+        for meta in self._col.get(include=["metadatas"])["metadatas"]:
+            counts[meta["source"]] = counts.get(meta["source"], 0) + 1
+        return dict(sorted(counts.items()))
+
+    def delete_source(self, source: str) -> int:
+        """Remove every chunk of one document; returns how many were removed."""
+        n = len(self._col.get(where={"source": source}, include=[])["ids"])
+        if n:
+            self._col.delete(where={"source": source})
+        return n
+
     def all_hits(self) -> list[Hit]:
         """Every stored chunk (score 0.0), e.g. to build a keyword index over the same chunks."""
         res = self._col.get(include=["documents", "metadatas"])

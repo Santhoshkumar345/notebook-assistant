@@ -18,12 +18,15 @@ class Retriever:
         self._store = store
         self._chunks = store.all_hits()
         self._by_id = {h.id: h for h in self._chunks}
-        self._bm25 = BM25Index([index_text(h) for h in self._chunks])
+        # BM25Okapi cannot be built from an empty corpus (ZeroDivisionError), and a fresh service has no documents.
+        self._bm25 = BM25Index([index_text(h) for h in self._chunks]) if self._chunks else None
 
     def dense(self, query: str, n: int) -> list[Hit]:
         return self._store.query(embeddings.embed([query])[0], n)
 
     def keyword(self, query: str, n: int) -> list[Hit]:
+        if self._bm25 is None:
+            return []
         return [self._chunks[i] for i in self._bm25.top(query, n)]
 
     def hybrid(self, query: str, n: int, pool: int = 20) -> list[Hit]:

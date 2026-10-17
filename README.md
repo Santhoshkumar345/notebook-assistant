@@ -4,8 +4,8 @@ A document Q&A system in the style of NotebookLM: upload documents, ask question
 with citations to the exact passages - and abstention when the documents don't contain the answer.
 
 > Status: **early build (Week 8 of a 16-week plan).** Ingestion, retrieval, grounded generation with
-> verified citations, and evaluation harnesses exist. The API, the agent layer, the .NET backend and
-> the UI do not yet. This README only claims what is built.
+> verified citations, hybrid retrieval, evaluation harnesses and a FastAPI service exist. The agent layer,
+> the .NET backend, authentication and the UI do not yet. This README only claims what is built.
 
 ## Planned architecture
 
@@ -35,7 +35,8 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | Harder evaluation: 20 questions, near-miss negatives, poisoned documents | `ai-service/evals/hard_eval.py` | built; baseline for the next step |
 | Hybrid search (dense + BM25, RRF) and optional cross-encoder reranking | `ai-service/app/hybrid.py`, `rerank.py`, `retrieval.py` | built; hybrid is the default |
 | Retrieval strategy comparison on the harder set | `ai-service/evals/retrieval_compare.py` | built |
-| FastAPI service | - | next |
+| FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
+| Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run
 
@@ -50,6 +51,23 @@ python -m venv .venv
 The tests and the `--retrieval-only` evaluations need no API key. The generation evaluations call Gemini
 (roughly 25-40 requests, paced for the free tier): copy `.env.example` to `ai-service/.env`, set `GEMINI_API_KEY`,
 then run `.venv\Scripts\python -m evals.hard_eval`.
+
+## Run the service
+
+```bash
+cd ai-service
+.venv\Scripts\python -m uvicorn app.api:app --port 8000
+```
+
+Needs `GEMINI_API_KEY` in `ai-service/.env` for `/ask`. Interactive API docs are at `http://127.0.0.1:8000/docs`.
+
+```bash
+curl -X POST http://127.0.0.1:8000/documents -H "Content-Type: application/json" -d "{\"name\": \"notes.md\", \"content\": \"# Notes\n\nChroma is the vector store.\"}"
+curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\": \"Which vector store is used?\"}"
+```
+
+**Known gaps:** no authentication, no per-user isolation (any caller can read or delete any document),
+no streaming. Do not expose this service beyond localhost until those exist.
 
 ## Background
 

@@ -99,3 +99,25 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   so only top-1 still separates the strategies. Next: questions written independently of the notes.
 - **Process:** my first run of this comparison was wrong. `retrieve()` fetched `max(k, pool)` candidates, so "pool 8" and "pool 20"
   both reranked 30 and the rows were identical. Spotted because identical rows and identical latency were implausible.
+
+### 2026-10-17 - AI service: a thin HTTP layer over a testable core
+- **Endpoints:** `GET /health`, `GET /documents`, `POST /documents`, `DELETE /documents/{name}`, `POST /ask`. The contract is typed with
+  Pydantic, which gives validation and an OpenAPI schema that a typed .NET client can be generated from. All RAG logic lives in
+  `app/service.py` with no HTTP in it; `app/api.py` only translates.
+- **Handlers are plain `def`, not `async def`,** because everything they do is blocking (embedding inference, Chroma, the Gemini SDK).
+  Measured in `experiments/event_loop_blocking.py`: with a 1 s blocking call inside an `async def` handler, five pings issued at
+  100-300 ms did not complete until 1,109-1,312 ms; with a plain `def` handler they completed at 139-357 ms. Caveats: one process,
+  the default threadpool, and CPU-bound pure-Python work (GIL contention) and thread-pool exhaustion were not tested.
+- **Shared state:** uploads and deletes are serialized by a lock, the keyword index is rebuilt and then swapped in, and readers use
+  whichever retriever is current. Not stress-tested under concurrent load.
+- **HTTP semantics:** `not_found` and `uncited` are valid outcomes (HTTP 200); unusable model output is 502; a rate-limited or overloaded
+  model is 503 with `Retry-After`; upstream error details are logged, not returned.
+- **Observability:** one log line per question with status, retrieved and cited chunk ids, and latency; the question text is not
+  logged. Python drops INFO records unless a handler is configured, so the logger is configured explicitly. Verified in a live run.
+- **Found while building:** `BM25Okapi([])` raises `ZeroDivisionError`, so a fresh service with no documents would have crashed on its first
+  question. The empty case is handled and tested.
+- **Live smoke test:** real uvicorn process and persistent store, real Gemini. Two notes ingested (18 chunks); an answerable question
+  returned `answered` with a cited chunk id, two unanswerable ones returned `not_found`, invalid inputs were 422. First question 4.9 s
+  (cold), then about 2 s.
+- **Known gaps (not built):** authentication between callers and this service; per-user isolation (any caller can read or delete any
+  document); response streaming; caller rate limiting; upload scanning. Request bodies are size-checked only after Pydantic has read them.
