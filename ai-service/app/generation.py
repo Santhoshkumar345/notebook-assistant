@@ -51,13 +51,13 @@ class RagResult:
     detail: str = ""
 
 
-def _escape(text: str) -> str:
+def escape_untrusted(text: str) -> str:
     """Stop a document from closing the <sources> tag early or opening its own."""
     return text.replace("<", "&lt;").replace(">", "&gt;")
 
 
 def build_prompt(question: str, hits: list[Hit]) -> str:
-    blocks = "\n\n".join(f"[{i}] ({h.source} > {h.heading})\n{_escape(h.body)}" for i, h in enumerate(hits, 1))
+    blocks = "\n\n".join(f"[{i}] ({h.source} > {h.heading})\n{escape_untrusted(h.body)}" for i, h in enumerate(hits, 1))
     return f"<sources>\n{blocks}\n</sources>\n\nQuestion: {question}"
 
 

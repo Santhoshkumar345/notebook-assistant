@@ -52,7 +52,8 @@ def test_ingest_then_ask_returns_the_cited_source(client):
 
 def test_asking_with_no_documents_is_not_found_not_an_error(client):
     reply = client.post("/ask", json={"question": "What is the capital of France?"})
-    assert reply.status_code == 200 and reply.json() == {"status": "not_found", "answer": "", "sources": []}
+    assert reply.status_code == 200
+    assert reply.json() == {"status": "not_found", "answer": "", "sources": [], "action": "retrieve", "trace": []}
 
 
 def test_reingesting_replaces_the_old_chunks(client):

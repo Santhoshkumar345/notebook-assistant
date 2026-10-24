@@ -41,6 +41,7 @@ class DocumentOut(BaseModel):
 class AskIn(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
     k: int = Field(default=4, ge=1, le=10, description="How many chunks to give the model")
+    mode: Literal["pipeline", "agent"] = Field(default="pipeline", description="pipeline: always retrieve then answer. agent: route, then retrieve, summarize or clarify")
 
 
 class SourceOut(BaseModel):
@@ -52,9 +53,12 @@ class SourceOut(BaseModel):
 
 class AskOut(BaseModel):
     # "not_found" and "uncited" are valid outcomes (no trustworthy answer), so they are HTTP 200.
-    status: Literal["answered", "not_found", "uncited"]
+    # For status "clarify" the answer field holds the clarifying question to put to the user.
+    status: Literal["answered", "not_found", "uncited", "clarify"]
     answer: str
     sources: list[SourceOut]
+    action: str = "retrieve"  # what the router chose: retrieve, summarize or clarify
+    trace: list[str] = []     # the agent's steps, for debugging (empty in pipeline mode)
 
 
 def configure_logging() -> None:
@@ -109,13 +113,17 @@ def create_app(service: Service | None = None, data_dir: str = DEFAULT_DATA_DIR)
 
     @app.post("/ask", response_model=AskOut)
     def ask(body: AskIn, request: Request):
-        result = svc(request).ask(body.question, body.k)
-        if result.status is Status.error:
-            raise HTTPException(status_code=502, detail=f"The model returned no usable output ({result.detail}).")
+        if body.mode == "agent":
+            r = svc(request).ask_agent(body.question, body.k)
+            status, answer, sources, action, trace, detail = r.status, r.answer, r.sources, r.action, r.trace, "; ".join(r.trace[-1:])
+        else:
+            r = svc(request).ask(body.question, body.k)
+            status, answer, sources, action, trace, detail = r.status.value, r.answer, r.sources, "retrieve", [], r.detail
+        if status == "error":
+            raise HTTPException(status_code=502, detail=f"The model returned no usable output ({detail}).")
         return AskOut(
-            status=result.status.value,
-            answer=result.answer,
-            sources=[SourceOut(id=s.id, source=s.source, heading=s.heading, snippet=s.body[:300]) for s in result.sources],
+            status=status, answer=answer, action=action, trace=trace,
+            sources=[SourceOut(id=s.id, source=s.source, heading=s.heading, snippet=s.body[:300]) for s in sources],
         )
 
     return app

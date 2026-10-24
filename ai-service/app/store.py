@@ -76,6 +76,15 @@ class VectorStore:
             self._col.delete(where={"source": source})
         return n
 
+    def chunks_of(self, source: str) -> list[Hit]:
+        """Every chunk of one document, in reading order."""
+        res = self._col.get(where={"source": source}, include=["documents", "metadatas"])
+        hits = [
+            Hit(meta["source"], meta["heading"], doc, 0.0, chunk_id)
+            for chunk_id, doc, meta in zip(res["ids"], res["documents"], res["metadatas"])
+        ]
+        return sorted(hits, key=lambda h: int(h.id.rsplit("#", 1)[1]))
+
     def all_hits(self) -> list[Hit]:
         """Every stored chunk (score 0.0), e.g. to build a keyword index over the same chunks."""
         res = self._col.get(include=["documents", "metadatas"])

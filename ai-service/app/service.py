@@ -10,6 +10,7 @@ import threading
 import time
 from typing import Callable
 
+from app.agent import AgentDeps, AgentResult, build_agent, llm_deps
 from app.generation import RagResult, answer_question
 from app.ingest import ingest_markdown
 from app.retrieval import Retriever
@@ -18,13 +19,15 @@ from app.store import Hit, VectorStore
 logger = logging.getLogger("notebook.service")
 
 Answerer = Callable[[str, list[Hit]], RagResult]
+AgentDepsFactory = Callable[[Callable[[str, int], list[Hit]], VectorStore, Answerer], AgentDeps]
 POOL = 20  # candidates each retriever contributes to hybrid fusion
 
 
 class Service:
-    def __init__(self, store: VectorStore, answerer: Answerer = answer_question):
+    def __init__(self, store: VectorStore, answerer: Answerer = answer_question, agent_deps_factory: AgentDepsFactory = llm_deps):
         self._store = store
         self._answerer = answerer
+        self._agent_deps_factory = agent_deps_factory
         self._write_lock = threading.Lock()
         self._retriever = Retriever(store)
 
@@ -58,5 +61,17 @@ class Service:
         logger.info(
             "ask status=%s retrieved=%s cited=%s ms=%.0f",
             result.status.value, [h.id for h in hits], [s.id for s in result.sources], (time.perf_counter() - started) * 1000,
+        )
+        return result
+
+    def ask_agent(self, question: str, k: int) -> AgentResult:
+        """The agent layer: routes the question (retrieve / summarize / clarify), with one bounded retry on not_found."""
+        started = time.perf_counter()
+        retriever = self._retriever  # one consistent snapshot for the whole run
+        deps = self._agent_deps_factory(lambda query, n: retriever.hybrid(query, n, POOL), self._store, self._answerer)
+        result = build_agent(deps, k=k)(question)
+        logger.info(
+            "ask(agent) action=%s status=%s model_calls=%d cited=%s ms=%.0f",
+            result.action, result.status, result.model_calls, [s.id for s in result.sources], (time.perf_counter() - started) * 1000,
         )
         return result
