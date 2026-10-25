@@ -10,7 +10,7 @@ are choices made on principle that still need to be validated by the evaluation 
 | UI | Angular | planned |
 | Primary backend | ASP.NET Core (users, metadata, chat history, streaming proxy) | planned |
 | AI service | Python, FastAPI | in progress |
-| Orchestration (agent layer) | LangGraph | planned (Weeks 9-11) |
+| Orchestration (agent layer) | LangGraph: route, retrieve, summarize, clarify, one bounded retry; opt-in via `mode=agent` | built |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (384-d, 256-token limit, English-centric) | built |
 | Vector store | Chroma, cosine space | built |
 | Retrieval | dense (Chroma) + BM25 (`rank-bm25`) fused with Reciprocal Rank Fusion; optional cross-encoder rerank | built |
@@ -121,3 +121,39 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   (cold), then about 2 s.
 - **Known gaps (not built):** authentication between callers and this service; per-user isolation (any caller can read or delete any
   document); response streaming; caller rate limiting; upload scanning. Request bodies are size-checked only after Pydantic has read them.
+
+### 2026-10-25 - Agent layer (LangGraph), opt-in; what it measured
+- **Design:** `route -> retrieve -> answer`, and if the answer is `not_found` and a rewrite is left, `rewrite -> retrieve -> answer`; `route -> summarize`;
+  `route -> clarify`. The router sees only the question and the document names, never raw text; every tool is read-only; the retry is at most one
+  rewrite and the graph has a recursion limit of 12; a router that returns nothing falls back to `retrieve`; the merged context is capped at 6 chunks.
+  `POST /ask` with `"mode": "agent"` (default `"pipeline"`) also returns the router's `action` and a `trace`.
+
+| | pipeline | agent |
+|---|---|---|
+| 24 clear questions answered with a gold-bearing citation | 24 | 24 |
+| model calls per answerable question | 1 | 2 |
+| 6 near-miss unanswerable questions abstained | 6/6 (1 call each) | 6/6 (4 calls each) |
+| weak retrieval (dense, k=3), 20 questions | 15 | 16 (3 retries: 1 rescued, 0 hurt) |
+| first ambiguous set (see limit 1) | 0/6 clarified, 2 answered anyway | 6/6 clarified |
+| independent vague set | - | 5/6 clarified; 0/6 over-clarified on 6 searchable questions |
+| 5 questions needing facts from two documents | 4 | 4 |
+| summary requests routed to the right document | - | 4/4; summaries mention >= 2 key terms: pipeline 3/4, agent 4/4 |
+
+- **Reading:** no accuracy gain on questions the pipeline already answers, at twice the model calls, and four times on unanswerable questions because the
+  `not_found` path retries. The value is behavioral. The pipeline answered two vague questions confidently from irrelevant chunks (an embedding limit for "What was
+  the limit?", a deployment sentence for "What does it cost?"); the agent asked instead. It routes summary requests, and under deliberately weakened retrieval its
+  retry rescued one question.
+- **Decision:** `pipeline` stays the default (cheaper, equal accuracy on clear questions); use `agent` where users type vague follow-ups or ask for summaries.
+- **Limits, in order of importance:**
+  1. The first ambiguous test was contaminated: the router prompt contains the words "it", "that" and "the limit", and the test questions reused them. An independent
+     set phrased differently got 5/6 (the miss failed safe: retrieve, then abstain). Still small, and hand-written by the same author.
+  2. The retry fires only on `not_found`. A confident answer built from the wrong chunk is never retried; two weak-retrieval failures were of that kind, and
+     they may be phrase-check mislabels, as in the earlier evaluation. A sufficiency grader would catch more, at another model call per question.
+  3. Decomposition is not built, so multi-document questions gain nothing (4/5 vs 4/5).
+  4. "Mentions two key terms" is a weak check of a summary. Faithfulness is not measured, and a summary reads only the first 24 sections of a document.
+  5. One false abstention survived the retry: "How does the API handle errors?" is answered by the "HTTP semantics" bullet, whose wording shares nothing with it.
+  6. One model, small hand-written sets, and temperature 0 is not reproducible.
+- **Found by using the system on its own docs:** this table used to say the agent layer was "planned", so the system faithfully answered "planned" when asked to
+  describe it. A RAG system is exactly as current as its documents.
+- **Process:** two background runs were lost when the session ended. The evaluation now caches each outcome, keyed to a fingerprint of code, prompts, corpus and
+  model, and resumes after a kill.

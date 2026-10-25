@@ -3,9 +3,9 @@
 A document Q&A system in the style of NotebookLM: upload documents, ask questions, get answers
 with citations to the exact passages - and abstention when the documents don't contain the answer.
 
-> Status: **early build (Week 8 of a 16-week plan).** Ingestion, retrieval, grounded generation with
-> verified citations, hybrid retrieval, evaluation harnesses and a FastAPI service exist. The agent layer,
-> the .NET backend, authentication and the UI do not yet. This README only claims what is built.
+> Status: **early build (Week 11 of a 16-week plan).** Ingestion, retrieval, grounded generation with
+> verified citations, hybrid retrieval, evaluation harnesses, a FastAPI service and an opt-in LangGraph agent
+> layer exist. The .NET backend, authentication and the UI do not yet. This README only claims what is built.
 
 ## Planned architecture
 
@@ -36,6 +36,8 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | Hybrid search (dense + BM25, RRF) and optional cross-encoder reranking | `ai-service/app/hybrid.py`, `rerank.py`, `retrieval.py` | built; hybrid is the default |
 | Retrieval strategy comparison on the harder set | `ai-service/evals/retrieval_compare.py` | built |
 | FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
+| Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
+| Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
 | Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run

@@ -10,12 +10,15 @@ Run unbuffered so progress shows:   python -u -m evals.agent_eval
 reported: the evaluation pauses between calls to respect the free tier, which would distort it.
 """
 
+import hashlib
+import json
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from app.agent import AgentDeps, AgentResult, build_agent, llm_deps
-from app.generation import Status, answer_question
+from app.generation import MODEL, Status, answer_question
 from app.ingest import ingest_markdown
 from app.retrieval import Retriever
 from app.store import Hit, VectorStore
@@ -60,6 +63,41 @@ def short(text: str, n: int = 100) -> str:
     return text if len(text) <= n else text[: n - 1] + "…"
 
 
+# --------------------------------------------------------------------------- resumable results
+# Every outcome is appended to a file as soon as it exists, and a rerun skips what is already there, so a run that is
+# killed (a closed session, a timeout) loses nothing. Entries carry a fingerprint of the code, prompts, corpus and model,
+# so a change invalidates them instead of silently serving stale results. `--fresh` starts over.
+ROOT = Path(__file__).resolve().parent.parent
+CACHE = ROOT / "data" / "agent_eval_cache.jsonl"
+FINGERPRINT_FILES = ["app/agent.py", "app/generation.py", "app/llm.py", "app/retrieval.py", "app/hybrid.py", "app/chunking.py",
+                     "evals/agent_set.py", "evals/hard_set.py"]
+
+
+def fingerprint(docs: dict[str, str]) -> str:
+    h = hashlib.sha256(MODEL.encode())
+    for rel in FINGERPRINT_FILES:
+        h.update((ROOT / rel).read_bytes())
+    for name in sorted(docs):
+        h.update(name.encode() + docs[name].encode())
+    return h.hexdigest()[:12]
+
+
+def load_cache(fp: str) -> dict[str, dict]:
+    if "--fresh" in sys.argv and CACHE.exists():
+        CACHE.unlink()
+    entries: dict[str, dict] = {}
+    if CACHE.exists():
+        for line in CACHE.read_text(encoding="utf-8").splitlines():
+            entry = json.loads(line)
+            if entry["fp"] == fp:
+                entries[entry["key"]] = entry
+    return entries
+
+
+def outcome_from(entry: dict) -> Outcome:
+    return Outcome(entry["status"], entry["answer"], [Hit(**h) for h in entry["sources"]], entry["calls"], entry["action"], tuple(entry["trace"]))
+
+
 def main() -> None:
     docs = corpus_docs()
     for q in HARD + SHORT_CLEAR + MULTI_DOC:
@@ -87,14 +125,34 @@ def main() -> None:
     dense = lambda q, n: retriever.dense(q, n)
     agent_hybrid = build_agent(make_deps(hybrid), k=K)
 
+    fp = fingerprint(docs)
+    cache = load_cache(fp)
+    print(f"resuming with {len(cache)} cached outcome(s) (fingerprint {fp})" if cache else f"no cached outcomes (fingerprint {fp})")
+    print()
+
+    def cached(key: str, compute) -> Outcome:
+        if key in cache:
+            return outcome_from(cache[key])
+        outcome = compute()
+        entry = {"fp": fp, "key": key, **{k: v for k, v in asdict(outcome).items()}, "trace": list(outcome.trace)}
+        CACHE.parent.mkdir(parents=True, exist_ok=True)
+        with CACHE.open("a", encoding="utf-8") as f:
+            print(json.dumps(entry), file=f)  # one JSON object per line
+        cache[key] = entry
+        return outcome
+
     def pipeline(question: str, retrieve, k: int) -> Outcome:
-        hits = retrieve(question, k)
-        result = answer(question, hits)
-        return Outcome(result.status.value, result.answer, result.sources, 1 if hits else 0)
+        def compute() -> Outcome:
+            hits = retrieve(question, k)
+            result = answer(question, hits)
+            return Outcome(result.status.value, result.answer, result.sources, 1 if hits else 0)
+        return cached(f"pipeline|{'hybrid' if retrieve is hybrid else 'dense'}|k{k}|{question}", compute)
 
     def agent(run, question: str) -> Outcome:
-        r: AgentResult = run(question)
-        return Outcome(r.status, r.answer, r.sources, r.model_calls, r.action, tuple(r.trace))
+        def compute() -> Outcome:
+            r: AgentResult = run(question)
+            return Outcome(r.status, r.answer, r.sources, r.model_calls, r.action, tuple(r.trace))
+        return cached(f"agent|{'hybrid' if run is agent_hybrid else 'dense'}|{question}", compute)
 
     # ------------------------------------------------------------------ Part 1
     print("=== Part 1: regression (hybrid retrieval, k=4) ===")
