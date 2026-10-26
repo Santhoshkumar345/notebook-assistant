@@ -7,7 +7,10 @@ the event loop for every other request (see experiments/event_loop_blocking.py).
 Not built yet: authentication between callers and this service, and per-user isolation of documents.
 """
 
+import contextvars
 import logging
+import re
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path as FsPath
 from typing import Literal
@@ -61,12 +64,28 @@ class AskOut(BaseModel):
     trace: list[str] = []     # the agent's steps, for debugging (empty in pipeline mode)
 
 
+# One id per user action, sent by the .NET API in X-Request-ID and attached to every log line, so a single request can be
+# traced across both services. An incoming value is accepted only if it is short and plain (so it cannot inject into logs).
+REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
+request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
 def configure_logging() -> None:
     """Python drops INFO records unless a handler and level are set; without this the per-request trace never appears."""
+    factory = logging.getLogRecordFactory()
+    if not getattr(factory, "adds_request_id", False):
+        def with_request_id(*args, **kwargs):
+            record = factory(*args, **kwargs)
+            record.request_id = request_id_var.get()
+            return record
+
+        with_request_id.adds_request_id = True
+        logging.setLogRecordFactory(with_request_id)
+
     root = logging.getLogger("notebook")
     if not root.handlers:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s"))
         root.addHandler(handler)
         root.setLevel(logging.INFO)
 
@@ -81,6 +100,18 @@ def create_app(service: Service | None = None, data_dir: str = DEFAULT_DATA_DIR)
         yield
 
     app = FastAPI(title="Notebook Assistant - AI service", version="0.1.0", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        incoming = request.headers.get("x-request-id", "")
+        request_id = incoming if REQUEST_ID.fullmatch(incoming) else uuid.uuid4().hex
+        token = request_id_var.set(request_id)
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_var.reset(token)
+        response.headers["X-Request-ID"] = request_id
+        return response
 
     @app.exception_handler(genai_errors.APIError)
     async def upstream_error(request: Request, exc: genai_errors.APIError):

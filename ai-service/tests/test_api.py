@@ -1,3 +1,6 @@
+import logging
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from google.genai import errors as genai_errors
@@ -98,3 +101,34 @@ def test_a_rate_limited_model_is_a_503_with_retry_after():
         reply = c.post("/ask", json={"question": "anything at all"})
     assert reply.status_code == 503 and reply.headers["Retry-After"] == "10"
     assert "slow down" not in reply.text  # upstream details are not leaked to the caller
+
+
+def test_a_valid_request_id_is_echoed_and_appears_in_the_service_log(caplog):
+    with make_client() as c:
+        c.post("/documents", json={"name": "guide.md", "content": GUIDE})
+        with caplog.at_level(logging.INFO, logger="notebook"):
+            reply = c.post("/ask", json={"question": "How do I install the widget?"}, headers={"X-Request-ID": "trace-123.abc_X"})
+    assert reply.headers["X-Request-ID"] == "trace-123.abc_X"
+    ask_lines = [r for r in caplog.records if r.name == "notebook.service" and r.getMessage().startswith("ask ")]
+    assert ask_lines and all(r.request_id == "trace-123.abc_X" for r in ask_lines)  # the sync handler runs in a threadpool: the id must survive that
+
+
+def test_a_request_id_is_generated_when_none_is_sent(client):
+    reply = client.get("/health")
+    assert re.fullmatch(r"[0-9a-f]{32}", reply.headers["X-Request-ID"])
+
+
+@pytest.mark.parametrize("unsafe", ["bad id with spaces", "{injected}", "a" * 65, "tab\there"])
+def test_an_unsafe_request_id_is_replaced_not_trusted(client, unsafe):
+    try:
+        reply = client.get("/health", headers={"X-Request-ID": unsafe})
+    except Exception:
+        pytest.skip("the HTTP client refused to send this header value at all")
+    assert re.fullmatch(r"[0-9a-f]{32}", reply.headers["X-Request-ID"])
+
+
+def test_the_request_id_is_not_left_set_after_the_request(client):
+    client.get("/health", headers={"X-Request-ID": "first"})
+    from app.api import request_id_var
+
+    assert request_id_var.get() == "-"

@@ -8,7 +8,7 @@ are choices made on principle that still need to be validated by the evaluation 
 | Layer | Technology | Status |
 |---|---|---|
 | UI | Angular | planned |
-| Primary backend | ASP.NET Core (users, metadata, chat history, streaming proxy) | planned |
+| Primary backend | ASP.NET Core: the edge (validation, error translation, correlation id) is built; users, metadata, chat history, streaming proxy are planned | edge built |
 | AI service | Python, FastAPI | in progress |
 | Orchestration (agent layer) | LangGraph: route, retrieve, summarize, clarify, one bounded retry; opt-in via `mode=agent` | built |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (384-d, 256-token limit, English-centric) | built |
@@ -157,3 +157,26 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   describe it. A RAG system is exactly as current as its documents.
 - **Process:** two background runs were lost when the session ended. The evaluation now caches each outcome, keyed to a fingerprint of code, prompts, corpus and
   model, and resumes after a kill.
+
+### 2026-10-26 - ASP.NET Core API edge in front of the AI service (step 1 of the .NET/Angular shell)
+
+- **Chosen:** the browser will talk only to an ASP.NET Core API (`api/`), which owns validation, error translation and (later) users, metadata and history, and calls
+  the Python service over a typed `HttpClient`. Controllers, not minimal APIs: they are what most .NET job descriptions mean. Four tests-first behaviours:
+  - **Validation at the edge**, mirroring the Python limits (`Contracts/Limits.cs`), so a bad request fails with a 400 before it costs a model call.
+  - **Upstream failures become honest HTTP**, as RFC 7807 ProblemDetails: busy 503 + `Retry-After`, unreachable 503, timeout 504, bad upstream output 502. Upstream bodies
+    are never echoed to the caller or logged.
+  - **No automatic retries on `/ask`.** Each retry is a paid, rate-limited model call, and the Python service already backs off on 429/503. Retrying here would multiply load exactly when the service is saturated.
+  - **One correlation id (`X-Request-ID`)**: accepted only if `[A-Za-z0-9._-]{1,64}` (otherwise replaced, so callers cannot inject into logs), returned on every response, forwarded to Python and attached to
+    the Python log lines. Logs carry paths and chunk ids, never question text.
+- **Evidence:** 42 .NET tests (a stub upstream records what the API sends) and 56 Python tests; a live run through both services showed the same id in the .NET and Python logs
+  for one question, and no question text in either log.
+- **Found while building it (each by a test or a live run, not by reading):**
+  1. `$` in a .NET regex matches before a trailing newline, so `DELETE /api/documents/notes.md%0A` passed the edge and reached the Python service (which rejects it), turning an input error into a 502 and a
+     validation gap. Fixed with `\z`; the test was written first and failed first.
+  2. The exception handler clears response headers, so an id set at the start of the request disappeared from exactly the error responses where it matters. It is now set in `OnStarting`; a mutation check confirmed the test fails with the naive version.
+  3. The live run showed the id was *not* in the .NET log lines: the console logger drops logging scopes by default, and a dictionary scope prints as its type name. Fixed with `IncludeScopes` and a template scope; both now have tests.
+  4. A transitive `Microsoft.OpenApi` 2.0.0 carries a high-severity advisory (GHSA-v5pm-xwqc-g5wc). Pinned to 2.7.5 in `NotebookApi.csproj`; remove the pin once the framework package is patched.
+- **Limits and risks:**
+  - The validation rules are duplicated in two languages and can drift; a drift surfaces as a 502 plus an Error log (`ContractMismatch`), not silently. A shared schema or contract test would remove the duplication.
+  - Live `/ask` calls took 19-47 s on the Gemini free tier (backoff on 429/503), against a 60 s `TimeoutSeconds`. A slow answer can still become a 504 even though the work succeeds. Streaming (planned) is the real fix.
+  - There is still no authentication and no per-user isolation; the .NET API does not add them yet (step 5).

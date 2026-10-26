@@ -3,16 +3,16 @@
 A document Q&A system in the style of NotebookLM: upload documents, ask questions, get answers
 with citations to the exact passages - and abstention when the documents don't contain the answer.
 
-> Status: **early build (Week 11 of a 16-week plan).** Ingestion, retrieval, grounded generation with
-> verified citations, hybrid retrieval, evaluation harnesses, a FastAPI service and an opt-in LangGraph agent
-> layer exist. The .NET backend, authentication and the UI do not yet. This README only claims what is built.
+> Status: **early build.** Ingestion, retrieval, grounded generation with verified citations, hybrid retrieval,
+> evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API edge exist.
+> Persistence, the Angular UI and authentication do not yet. This README only claims what is built.
 
 ## Planned architecture
 
 ```
 Angular UI
    |
-ASP.NET Core API    users, document metadata, chat history, streaming          (planned)
+ASP.NET Core API    edge built (validation, errors, correlation id); users, metadata, history, streaming planned
    |
 FastAPI AI service  ingest -> chunk -> embed -> Chroma -> retrieve -> Gemini   (in progress)
    |                + LangGraph agent: retrieve / summarize / ask a clarifying question (planned)
@@ -38,6 +38,7 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
 | Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
 | Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
+| ASP.NET Core API edge: validation, typed client, ProblemDetails error mapping, correlation id; 42 tests | `api/` | built; no persistence or auth yet |
 | Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run
@@ -67,6 +68,20 @@ Needs `GEMINI_API_KEY` in `ai-service/.env` for `/ask`. Interactive API docs are
 curl -X POST http://127.0.0.1:8000/documents -H "Content-Type: application/json" -d "{\"name\": \"notes.md\", \"content\": \"# Notes\n\nChroma is the vector store.\"}"
 curl -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\": \"Which vector store is used?\"}"
 ```
+
+## Run the .NET API
+
+Start the AI service first (above), then:
+
+```bash
+cd api
+dotnet test
+dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
+```
+
+The API listens on `http://127.0.0.1:5247` and forwards to `AiService:BaseUrl` (default `http://127.0.0.1:8000`, set in
+`api/src/NotebookApi/appsettings.json`). Routes: `GET /api/health`, `GET|POST /api/documents`, `DELETE /api/documents/{name}`, `POST /api/ask`.
+Send `X-Request-ID` to trace one request through both services' logs. OpenAPI is served at `/openapi/v1.json` in Development.
 
 **Known gaps:** no authentication, no per-user isolation (any caller can read or delete any document),
 no streaming. Do not expose this service beyond localhost until those exist.
