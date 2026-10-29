@@ -8,7 +8,7 @@ are choices made on principle that still need to be validated by the evaluation 
 | Layer | Technology | Status |
 |---|---|---|
 | UI | Angular | planned |
-| Primary backend | ASP.NET Core: the edge (validation, error translation, correlation id) is built; users, metadata, chat history, streaming proxy are planned | edge built |
+| Primary backend | ASP.NET Core: edge (validation, error translation, correlation id), persistence (documents, chat history; EF Core + SQLite) built; users and streaming planned | edge + persistence built |
 | AI service | Python, FastAPI | in progress |
 | Orchestration (agent layer) | LangGraph: route, retrieve, summarize, clarify, one bounded retry; opt-in via `mode=agent` | built |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (384-d, 256-token limit, English-centric) | built |
@@ -180,3 +180,23 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   - The validation rules are duplicated in two languages and can drift; a drift surfaces as a 502 plus an Error log (`ContractMismatch`), not silently. A shared schema or contract test would remove the duplication.
   - Live `/ask` calls took 19-47 s on the Gemini free tier (backoff on 429/503), against a 60 s `TimeoutSeconds`. A slow answer can still become a 504 even though the work succeeds. Streaming (planned) is the real fix.
   - There is still no authentication and no per-user isolation; the .NET API does not add them yet (step 5).
+
+### 2026-10-29 - Persistence in the .NET API (step 2): the database is the source of truth, the index is derived
+
+- **Chosen:** EF Core with SQLite and real migrations (`api/src/NotebookApi/Data/`). Three tables: documents (name, full text, status, chunk count), conversations, messages (question or answer, status, cited sources as JSON, the request id).
+  - **SQL owns the documents; Chroma is a rebuildable index.** The original text is kept so the index can be recreated (new embedding model, wiped index) without asking users to upload again.
+  - **Two stores cannot share a transaction, so each write is ordered to fail safe.** Upload: save as `Pending`, send to the AI service, then `Indexed`; on failure `Failed` (with only the failure *kind*, never upstream text) and the error is still returned. Delete: the AI service first, the row second, so a failure keeps the row and the delete can be repeated. `POST /api/documents/{name}/reindex` retries one document; `POST /api/documents/sync` deletes index entries the database does not know and re-sends every stored document, and can be re-run after a partial failure.
+  - **Document writes go through one gate** (`DocumentWriteGate`), so two overlapping uploads of one name cannot leave one version in the database and the other in the index. Single instance only.
+  - **History is saved only for finished exchanges**, question and answer in one transaction. A failed ask saves nothing and the caller retries. The conversation id is used for saving and never sent to the AI service. Question text is stored as user data and is still never written to the logs (a test checks this).
+- **Evidence:** 83 .NET tests, including a stub upstream that fails in four different ways, cancellation, overlapping uploads, a conversation deleted mid-answer, and checks that the shipped migrations match the model. Deliberate breakages (no gate, no `Failed` record, delete order swapped, `Failed` saved with the request token) each failed a specific test, and the original code passed. Live run against the real services and Gemini: an index-only orphan removed by sync, a two-turn conversation saved, an upload while the AI service was down left a `Failed` row that re-indexed after the restart, and documents and history survived an API restart.
+- **Found while building it:**
+  1. EF Core's SQLite package pulls a native SQLite with a high-severity advisory (SQLite before 3.50.2, CVE-2025-6965). Pinned `SQLitePCLRaw.lib.e_sqlite3` 2.1.14, and a test now asks the engine for its version instead of trusting the package number.
+  2. The SQLite provider cannot `ORDER BY` a `DateTimeOffset` kept as text; stored as a binary value (all UTC) instead, with a round-trip test.
+  3. EF Core 9+ registers the `AddDbContext` lambda separately from the options, so a test replacing only the options would apply the file database on top of the in-memory one. Both registrations are removed.
+  4. `dotnet ef` runs startup code between `Build()` and `Run()`; the migrate call there is harmless today but means tooling will touch the database path.
+- **Limits:**
+  - **A conversation is a record, not model context.** The AI service takes one question at a time, so a follow-up like "and the second one?" is not understood from earlier turns, and a clarify answer is not combined with the original question. Changing that means sending history to the AI service and re-running the evaluations.
+  - No users yet: every caller sees every document and conversation. `UserId` columns and per-user queries arrive in step 5 with a migration; the AI service also needs tenant isolation.
+  - The migration runs at startup, which suits one instance. Several instances starting together would need it as a separate deploy step, and the write gate would need a database-level lock.
+  - SQLite migrations are provider-specific: moving to SQL Server or Azure SQL means regenerating them.
+  - Nothing limits how many documents or conversations exist; abuse limits belong with authentication.

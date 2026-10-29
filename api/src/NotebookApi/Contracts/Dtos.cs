@@ -26,11 +26,31 @@ public sealed class AskIn
 
     [RegularExpression(Limits.ModePattern, ErrorMessage = "The mode must be 'pipeline' or 'agent'.")]
     public string Mode { get; init; } = "pipeline";
+
+    /// <summary>Continue this conversation. Omitted: a new one is started. Used only to save the exchange; the AI service never sees it.</summary>
+    public Guid? ConversationId { get; init; }
 }
 
 public sealed record SourceOut(string Id, string Source, string Heading, string Snippet);
 
-/// <summary>For status "clarify" the answer field holds the clarifying question to put to the user.</summary>
+/// <summary>The AI service's reply, as it sends it. For status "clarify" the answer field holds the clarifying question to put to the user.</summary>
 public sealed record AskOut(string Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
 
 public sealed record AiHealth(string Status, int Documents, int Chunks);
+
+// ----------------------------------------------------------------- what the API itself returns (persisted state)
+
+/// <summary>A document as stored here. Status is Pending, Indexed or Failed; see DocumentStatus.</summary>
+public sealed record DocumentInfo(string Name, int Chars, int? Chunks, string Status, string? Error, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+/// <summary>What a sync did: how many documents were re-sent to the AI service, and which names it held that this API did not know about (now removed).</summary>
+public sealed record SyncResult(int Reindexed, IReadOnlyList<string> RemovedFromIndex);
+
+/// <summary>The AI service's answer, plus where it was saved.</summary>
+public sealed record AskResponse(Guid ConversationId, int MessageId, string Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
+
+public sealed record ConversationSummary(Guid Id, string Title, int Messages, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+public sealed record MessageOut(int Id, string Role, string Text, string? Status, string? Action, IReadOnlyList<SourceOut> Sources, DateTimeOffset CreatedAt);
+
+public sealed record ConversationOut(Guid Id, string Title, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<MessageOut> Messages);

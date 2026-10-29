@@ -8,6 +8,10 @@ venv/
 
 # Local data and secrets
 ai-service/data/
+api/src/NotebookApi/App_Data/
+*.db
+*.db-shm
+*.db-wal
 .env
 .env.local
 !.env.example

@@ -20,7 +20,7 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     public ApiTests(ApiFactory factory)
     {
         _factory = factory;
-        factory.Upstream.Reset();
+        factory.ResetAsync().GetAwaiter().GetResult();
         _client = factory.CreateClient();
     }
 
@@ -168,21 +168,6 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
 
     // ----------------------------------------------------------------- documents
 
-    [Fact]
-    public async Task Adding_a_document_forwards_name_and_content_and_returns_201_with_a_location()
-    {
-        Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.Created, """{"name":"my notes.md","chunks":3}""");
-
-        var response = await _client.PostAsJsonAsync("/api/documents", new { name = "my notes.md", content = "# Notes\n\nSome text." });
-
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal("/api/documents/my%20notes.md", response.Headers.Location?.ToString());
-        var sent = JsonDocument.Parse(Assert.Single(Upstream.Calls).Body).RootElement;
-        Assert.Equal("my notes.md", sent.GetProperty("name").GetString());
-        Assert.Equal("# Notes\n\nSome text.", sent.GetProperty("content").GetString());
-        Assert.Equal(3, (await ReadJson(response)).GetProperty("chunks").GetInt32());
-    }
-
     [Theory]
     [InlineData("notes.txt")]
     [InlineData("a/b.md")]
@@ -205,41 +190,6 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, huge.StatusCode);
         Assert.Empty(Upstream.Calls);
-    }
-
-    [Fact]
-    public async Task Listing_documents_passes_the_counts_through()
-    {
-        Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.OK, """{"a.md":3,"b.md":5}""");
-
-        var body = await ReadJson(await _client.GetAsync("/api/documents"));
-
-        Assert.Equal(3, body.GetProperty("a.md").GetInt32());
-        Assert.Equal(5, body.GetProperty("b.md").GetInt32());
-    }
-
-    [Fact]
-    public async Task Deleting_escapes_the_name_in_the_upstream_path_and_returns_204()
-    {
-        Upstream.Respond = _ => new HttpResponseMessage(HttpStatusCode.NoContent);
-
-        var response = await _client.DeleteAsync("/api/documents/my%20notes.md");
-
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        var call = Assert.Single(Upstream.Calls);
-        Assert.Equal(HttpMethod.Delete, call.Method);
-        Assert.Equal("/documents/my%20notes.md", call.PathAndQuery);
-    }
-
-    [Fact]
-    public async Task Deleting_a_missing_document_is_a_404_problem()
-    {
-        Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.NotFound, """{"detail":"No such document"}""");
-
-        var response = await _client.DeleteAsync("/api/documents/missing.md");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]

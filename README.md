@@ -4,15 +4,16 @@ A document Q&A system in the style of NotebookLM: upload documents, ask question
 with citations to the exact passages - and abstention when the documents don't contain the answer.
 
 > Status: **early build.** Ingestion, retrieval, grounded generation with verified citations, hybrid retrieval,
-> evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API edge exist.
-> Persistence, the Angular UI and authentication do not yet. This README only claims what is built.
+> evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API (validation,
+> error mapping, document and chat-history persistence) exist. The Angular UI and authentication do not yet.
+> This README only claims what is built.
 
 ## Planned architecture
 
 ```
 Angular UI
    |
-ASP.NET Core API    edge built (validation, errors, correlation id); users, metadata, history, streaming planned
+ASP.NET Core API    built: validation, errors, correlation id, documents + chat history in SQLite; users, streaming planned
    |
 FastAPI AI service  ingest -> chunk -> embed -> Chroma -> retrieve -> Gemini   (in progress)
    |                + LangGraph agent: retrieve / summarize / ask a clarifying question (planned)
@@ -38,7 +39,7 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
 | Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
 | Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
-| ASP.NET Core API edge: validation, typed client, ProblemDetails error mapping, correlation id; 42 tests | `api/` | built; no persistence or auth yet |
+| ASP.NET Core API: validation, typed client, ProblemDetails error mapping, correlation id, SQLite persistence (documents, conversations), index sync; 83 tests | `api/` | built; no auth yet |
 | Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run
@@ -80,7 +81,10 @@ dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
 ```
 
 The API listens on `http://127.0.0.1:5247` and forwards to `AiService:BaseUrl` (default `http://127.0.0.1:8000`, set in
-`api/src/NotebookApi/appsettings.json`). Routes: `GET /api/health`, `GET|POST /api/documents`, `DELETE /api/documents/{name}`, `POST /api/ask`.
+`api/src/NotebookApi/appsettings.json`). Routes: `GET /api/health`; `GET|POST /api/documents`, `DELETE /api/documents/{name}`, `POST /api/documents/{name}/reindex`, `POST /api/documents/sync`;
+`POST /api/ask` (optional `conversationId`); `GET /api/conversations`, `GET|DELETE /api/conversations/{id}`.
+Documents and history live in a SQLite file (`Database:Path`, default `api/src/NotebookApi/App_Data/notebook.db`, created and migrated on first start, not committed).
+The database is the source of truth; the AI service's index is derived from it, and `POST /api/documents/sync` makes the index match.
 Send `X-Request-ID` to trace one request through both services' logs. OpenAPI is served at `/openapi/v1.json` in Development.
 
 **Known gaps:** no authentication, no per-user isolation (any caller can read or delete any document),

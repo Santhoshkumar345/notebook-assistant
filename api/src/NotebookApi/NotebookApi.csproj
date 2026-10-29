@@ -8,10 +8,19 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <!-- Pinned above the version Microsoft.AspNetCore.OpenApi brings in transitively (2.0.0), which has a known high-severity
          advisory (GHSA-v5pm-xwqc-g5wc, circular schema references in OpenAPI parsing). 2.7.5 is the patched release of the 2.x line.
          Remove this pin once Microsoft.AspNetCore.OpenApi depends on a patched version itself. -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <!-- The native SQLite engine. Microsoft.EntityFrameworkCore.Sqlite brings 2.1.11, which bundles a SQLite older than 3.50.2 (CVE-2025-6965,
+         memory corruption in aggregate queries; GHSA-2m69-gcr7-jv3q covers <= 2.1.11). SchemaTests asks the engine for its version, so this
+         cannot silently regress. Remove the pin once the EF Core SQLite package depends on a patched build itself. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.14" />
   </ItemGroup>
 
 </Project>
