@@ -14,6 +14,7 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     private const string AskReply = """{"status":"answered","answer":"Chroma.","sources":[{"id":"a.md#0","source":"a.md","heading":"Setup","snippet":"Chroma is the store."}],"action":"retrieve","trace":[]}""";
 
     private readonly ApiFactory _factory;
+    private readonly TestUser _user;
     private readonly HttpClient _client;
     private StubUpstream Upstream => _factory.Upstream;
 
@@ -21,7 +22,8 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     {
         _factory = factory;
         factory.ResetAsync().GetAwaiter().GetResult();
-        _client = factory.CreateClient();
+        _user = factory.SignUp();
+        _client = _user.Client;
     }
 
     private static async Task<JsonElement> ReadJson(HttpResponseMessage response) =>
@@ -237,6 +239,7 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Health_is_ok_when_the_AI_service_is_up()
     {
+        // Even if the AI service volunteered counts (they would span every user), the API's health answer does not pass them on.
         Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.OK, """{"status":"ok","documents":2,"chunks":18}""");
 
         var response = await _client.GetAsync("/api/health");
@@ -244,7 +247,8 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await ReadJson(response);
         Assert.Equal("ok", body.GetProperty("status").GetString());
-        Assert.Equal(18, body.GetProperty("ai").GetProperty("chunks").GetInt32());
+        Assert.Equal("ok", body.GetProperty("ai").GetProperty("status").GetString());
+        Assert.Equal(["status"], body.GetProperty("ai").EnumerateObject().Select(p => p.Name).ToArray());
     }
 
     [Fact]

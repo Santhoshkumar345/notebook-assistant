@@ -16,4 +16,11 @@ public sealed class AiServiceOptions
     /// </summary>
     [Range(1, 300)]
     public int TimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// The secret shared with the AI service (its AI_SERVICE_KEY). The AI service refuses to start without one, and this API refuses to
+    /// start without it too. Provide it through user secrets or the environment (AiService__ApiKey), never a committed file.
+    /// </summary>
+    [Required, MinLength(16)]
+    public string ApiKey { get; set; } = "";
 }

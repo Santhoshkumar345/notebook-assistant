@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NotebookApi.Clients;
 using NotebookApi.Contracts;
 using NotebookApi.Data;
+using NotebookApi.Infrastructure;
 using NotebookApi.Services;
 
 namespace NotebookApi.Tests;
@@ -13,6 +15,7 @@ namespace NotebookApi.Tests;
 public sealed class DocumentTests : IClassFixture<ApiFactory>
 {
     private readonly ApiFactory _factory;
+    private readonly TestUser _user;
     private readonly HttpClient _client;
     private StubUpstream Upstream => _factory.Upstream;
 
@@ -20,7 +23,8 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
     {
         _factory = factory;
         factory.ResetAsync().GetAwaiter().GetResult();
-        _client = factory.CreateClient();
+        _user = factory.SignUp();
+        _client = _user.Client;
         Healthy(chunks: 3);
     }
 
@@ -58,7 +62,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         Assert.Equal("my notes.md", sent.GetProperty("name").GetString());
         Assert.Equal("# Notes\n\nSome text.", sent.GetProperty("content").GetString());
 
-        var stored = await _factory.Db(db => db.Documents.SingleAsync());
+        var stored = await _factory.DbFor(_user.Id, db => db.Documents.SingleAsync());
         Assert.Equal("# Notes\n\nSome text.", stored.Content);
         Assert.Equal(DocumentStatus.Indexed, stored.Status);
     }
@@ -75,7 +79,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var info = await Listed("a.md");
         Assert.Equal(ManualClock.Start, info.GetProperty("createdAt").GetDateTimeOffset());
         Assert.Equal(ManualClock.Start.AddMinutes(5), info.GetProperty("updatedAt").GetDateTimeOffset());
-        var stored = await _factory.Db(db => db.Documents.SingleAsync());
+        var stored = await _factory.DbFor(_user.Id, db => db.Documents.SingleAsync());
         Assert.Equal("# Two\n\nsecond version", stored.Content);
     }
 
@@ -97,7 +101,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
     {
         await Upload("a.md", "# A");
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => _factory.Db(async db =>
+        await Assert.ThrowsAsync<DbUpdateException>(() => _factory.DbFor(_user.Id, async db =>
         {
             db.Documents.Add(new StoredDocument { Name = "a.md", Content = "duplicate" });
             await db.SaveChangesAsync();
@@ -128,7 +132,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         Assert.Equal("Failed", info.GetProperty("status").GetString());
         Assert.Equal(recordedKind, info.GetProperty("error").GetString());
         Assert.Equal(JsonValueKind.Null, info.GetProperty("chunks").ValueKind);
-        Assert.Equal("# A\n\ntext that must not be lost", (await _factory.Db(db => db.Documents.SingleAsync())).Content);
+        Assert.Equal("# A\n\ntext that must not be lost", (await _factory.DbFor(_user.Id, db => db.Documents.SingleAsync())).Content);
         Assert.DoesNotContain("secret-detail", await response.Content.ReadAsStringAsync());
         Assert.DoesNotContain("secret-detail", info.ToString());
     }
@@ -172,11 +176,17 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             throw new TaskCanceledException();
         };
 
-        using var scope = _factory.Services.CreateScope();
-        var documents = scope.ServiceProvider.GetRequiredService<DocumentService>();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => documents.UpsertAsync(new DocumentIn { Name = "a.md", Content = "# A" }, cancel.Token));
+        // The service is built by hand, as this user: there is no HTTP request here for it to find the signed-in user in.
+        await _factory.DbFor(_user.Id, async db =>
+        {
+            using var scope = _factory.Services.CreateScope();
+            var documents = new DocumentService(
+                db, scope.ServiceProvider.GetRequiredService<IAiServiceClient>(), _factory.Clock,
+                scope.ServiceProvider.GetRequiredService<DocumentWriteGate>(), new FixedUser(_user.Id));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => documents.UpsertAsync(new DocumentIn { Name = "a.md", Content = "# A" }, cancel.Token));
+        });
 
-        var stored = await _factory.Db(db => db.Documents.SingleAsync());
+        var stored = await _factory.DbFor(_user.Id, db => db.Documents.SingleAsync());
         Assert.Equal(DocumentStatus.Failed, stored.Status);
         Assert.Equal("Cancelled", stored.Error);
     }
@@ -196,7 +206,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var call = Assert.Single(Upstream.Calls);
         Assert.Equal(HttpMethod.Delete, call.Method);
         Assert.Equal("/documents/my%20notes.md", call.PathAndQuery);
-        Assert.Empty(await _factory.Db(db => db.Documents.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()));
     }
 
     [Fact]
@@ -208,11 +218,11 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var failed = await _client.DeleteAsync("/api/documents/a.md");
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, failed.StatusCode);
-        Assert.Single(await _factory.Db(db => db.Documents.ToListAsync()));
+        Assert.Single(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()));
 
         Healthy(chunks: 1);
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync("/api/documents/a.md")).StatusCode);
-        Assert.Empty(await _factory.Db(db => db.Documents.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()));
     }
 
     [Fact]
@@ -222,7 +232,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.NotFound, """{"detail":"No such document"}""");
 
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync("/api/documents/a.md")).StatusCode);
-        Assert.Empty(await _factory.Db(db => db.Documents.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()));
     }
 
     [Fact]
@@ -261,20 +271,20 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             ["GET /documents", "DELETE /documents/orphan.md", "DELETE /documents/zz-orphan.md", "POST /documents", "POST /documents"],
             Upstream.Calls.Select(c => $"{c.Method} {c.PathAndQuery}").ToArray());
         Assert.Equal(["a.md", "b.md"], Upstream.Calls.Where(c => c.Method == HttpMethod.Post).Select(c => JsonDocument.Parse(c.Body).RootElement.GetProperty("name").GetString()!).ToArray());
-        Assert.All(await _factory.Db(db => db.Documents.ToListAsync()), d => { Assert.Equal(DocumentStatus.Indexed, d.Status); Assert.Equal(9, d.Chunks); });
+        Assert.All(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()), d => { Assert.Equal(DocumentStatus.Indexed, d.Status); Assert.Equal(9, d.Chunks); });
     }
 
     [Fact]
     public async Task Sync_with_the_AI_service_unreachable_fails_before_changing_anything()
     {
         await Upload("a.md", "# A");
-        var before = await _factory.Db(db => db.Documents.AsNoTracking().SingleAsync());
+        var before = await _factory.DbFor(_user.Id, db => db.Documents.AsNoTracking().SingleAsync());
         Upstream.Respond = _ => throw new HttpRequestException("down");
 
         var response = await _client.PostAsync("/api/documents/sync", null);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        var after = await _factory.Db(db => db.Documents.AsNoTracking().SingleAsync());
+        var after = await _factory.DbFor(_user.Id, db => db.Documents.AsNoTracking().SingleAsync());
         Assert.Equal(before.Status, after.Status);
         Assert.Equal(before.Chunks, after.Chunks);
         Assert.Equal(before.UpdatedAt, after.UpdatedAt);
@@ -299,7 +309,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
         Healthy(chunks: 5);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsync("/api/documents/sync", null)).StatusCode);
-        Assert.All(await _factory.Db(db => db.Documents.ToListAsync()), d => Assert.Equal(DocumentStatus.Indexed, d.Status));
+        Assert.All(await _factory.DbFor(_user.Id, db => db.Documents.ToListAsync()), d => Assert.Equal(DocumentStatus.Indexed, d.Status));
     }
 
     // ----------------------------------------------------------------- overlapping writes
@@ -322,7 +332,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         };
 
         var first = Upload("a.md", "# first version");
-        await firstSeen.Task;
+        await firstSeen.Task.WaitAsync(TimeSpan.FromSeconds(10)); // a timeout, so a broken upload fails this test instead of hanging the run
         var second = Upload("a.md", "# second version");
         await Task.Delay(400); // time for the second request to reach the gate if there were none
 
@@ -331,7 +341,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         await Task.WhenAll(first, second);
 
         Assert.Equal(["# first version", "# second version"], Upstream.Calls.Select(c => JsonDocument.Parse(c.Body).RootElement.GetProperty("content").GetString()!).ToArray());
-        var stored = await _factory.Db(db => db.Documents.SingleAsync());
+        var stored = await _factory.DbFor(_user.Id, db => db.Documents.SingleAsync());
         Assert.Equal("# second version", stored.Content); // database and index agree: the last upload won in both
         Assert.Equal(DocumentStatus.Indexed, stored.Status);
         Assert.Equal([HttpStatusCode.Created, HttpStatusCode.OK], new[] { (await first).StatusCode, (await second).StatusCode });

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using NotebookApi.Clients;
 using NotebookApi.Contracts;
 using NotebookApi.Infrastructure;
@@ -8,6 +9,9 @@ namespace NotebookApi.Controllers;
 
 [ApiController]
 [Route("api/ask")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemContent.Type)]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemContent.Type)]
+[EnableRateLimiting("ask")]
 public sealed class AskController(IAiServiceClient ai, ConversationService conversations) : ControllerBase
 {
     /// <summary>

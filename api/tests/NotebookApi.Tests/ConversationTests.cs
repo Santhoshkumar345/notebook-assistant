@@ -12,6 +12,7 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
     private const string Answered = """{"status":"answered","answer":"Chroma.","sources":[{"id":"a.md#0","source":"a.md","heading":"Setup","snippet":"Chroma is the store."}],"action":"retrieve","trace":[]}""";
 
     private readonly ApiFactory _factory;
+    private readonly TestUser _user;
     private readonly HttpClient _client;
     private StubUpstream Upstream => _factory.Upstream;
 
@@ -19,7 +20,8 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
     {
         _factory = factory;
         factory.ResetAsync().GetAwaiter().GetResult();
-        _client = factory.CreateClient();
+        _user = factory.SignUp();
+        _client = _user.Client;
         Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.OK, Answered);
     }
 
@@ -108,7 +110,7 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
 
         await _client.SendAsync(request);
 
-        var messages = await _factory.Db(db => db.Messages.ToListAsync());
+        var messages = await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync());
         Assert.Equal(2, messages.Count);
         Assert.All(messages, m => Assert.Equal("trace-42", m.RequestId));
     }
@@ -125,22 +127,22 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
         var response = await Ask("Which vector database is used?");
 
         Assert.False(response.IsSuccessStatusCode);
-        Assert.Empty(await _factory.Db(db => db.Conversations.ToListAsync()));
-        Assert.Empty(await _factory.Db(db => db.Messages.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Conversations.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync()));
     }
 
     [Fact]
     public async Task A_failed_ask_in_an_existing_conversation_leaves_it_unchanged()
     {
         var id = await StartConversation("first question");
-        var before = await _factory.Db(db => db.Conversations.AsNoTracking().SingleAsync());
+        var before = await _factory.DbFor(_user.Id, db => db.Conversations.AsNoTracking().SingleAsync());
         _factory.Clock.Advance(TimeSpan.FromHours(1));
         Upstream.Respond = _ => throw new HttpRequestException("down");
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Ask("second question", id)).StatusCode);
 
-        Assert.Equal(2, await _factory.Db(db => db.Messages.CountAsync()));
-        Assert.Equal(before.UpdatedAt, (await _factory.Db(db => db.Conversations.AsNoTracking().SingleAsync())).UpdatedAt);
+        Assert.Equal(2, await _factory.DbFor(_user.Id, db => db.Messages.CountAsync()));
+        Assert.Equal(before.UpdatedAt, (await _factory.DbFor(_user.Id, db => db.Conversations.AsNoTracking().SingleAsync())).UpdatedAt);
     }
 
     [Fact]
@@ -151,7 +153,7 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         Assert.Empty(Upstream.Calls);
-        Assert.Empty(await _factory.Db(db => db.Messages.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync()));
     }
 
     [Fact]
@@ -160,14 +162,14 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
         var id = await StartConversation("first question");
         Upstream.Respond = _ =>
         {
-            _factory.Db(db => db.Conversations.ExecuteDeleteAsync()).GetAwaiter().GetResult(); // deleted in another request, mid-answer
+            _factory.DbFor(_user.Id, db => db.Conversations.ExecuteDeleteAsync()).GetAwaiter().GetResult(); // deleted in another request, mid-answer
             return StubUpstream.Json(HttpStatusCode.OK, Answered);
         };
 
         var response = await Ask("second question", id);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Empty(await _factory.Db(db => db.Messages.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync()));
     }
 
     [Fact]
@@ -177,7 +179,7 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
 
         Assert.NotEmpty(_factory.Logs.Entries);
         Assert.DoesNotContain(_factory.Logs.Entries, e => e.Message.Contains("a-very-distinctive-question-text") || e.Message.Contains("Chroma."));
-        Assert.Equal(2, await _factory.Db(db => db.Messages.CountAsync()));
+        Assert.Equal(2, await _factory.DbFor(_user.Id, db => db.Messages.CountAsync()));
     }
 
     // ----------------------------------------------------------------- listing, reading, deleting
@@ -246,7 +248,7 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/conversations/{doomed}")).StatusCode);
 
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/conversations/{doomed}")).StatusCode);
-        var remaining = await _factory.Db(db => db.Messages.ToListAsync());
+        var remaining = await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync());
         Assert.Equal(2, remaining.Count);
         Assert.All(remaining, m => Assert.Equal(kept, m.ConversationId));
         Assert.Equal(HttpStatusCode.NotFound, (await _client.DeleteAsync($"/api/conversations/{doomed}")).StatusCode);

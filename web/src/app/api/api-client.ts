@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 
 import { ApiError } from './api-error';
-import type { AskRequest, AskResponse, ConversationOut, ConversationSummary, DocumentIn, DocumentInfo, Health, HealthOut, SyncResult } from './models';
+import type { AskRequest, AskResponse, ConversationOut, ConversationSummary, DocumentIn, DocumentInfo, Health, HealthOut, LoginRequest, RegisterRequest, SyncResult, UserInfo } from './models';
 
 /** Typed calls to the .NET API. Paths are relative: in development the dev server proxies /api to the API (proxy.conf.json). */
 @Injectable({ providedIn: 'root' })
@@ -13,7 +13,7 @@ export class ApiClient {
   /** Never fails: an unhealthy system is an answer, not an error, so a status indicator can show it. */
   health(): Observable<Health> {
     return this.http.get<HealthOut>('/api/health').pipe(
-      map((body): Health => ({ state: 'ok', documents: body.ai?.documents ?? 0, chunks: body.ai?.chunks ?? 0 })),
+      map((): Health => ({ state: 'ok' })),
       catchError((error: unknown) => {
         // 503 with the API's own request id: the API is up and says the AI service is not. Anything else: the API itself is out of reach.
         const degraded = error instanceof ApiError && error.status === 503 && error.requestId !== null;
@@ -60,5 +60,24 @@ export class ApiClient {
 
   deleteConversation(id: string): Observable<void> {
     return this.http.delete<void>(`/api/conversations/${encodeURIComponent(id)}`);
+  }
+
+  // ----------------------------------------------------------------- accounts
+
+  /** Who is signed in. Also how the page gets its CSRF token: the response sets the XSRF-TOKEN cookie Angular copies into later requests. */
+  me(): Observable<UserInfo> {
+    return this.http.get<UserInfo>('/api/auth/me');
+  }
+
+  register(request: RegisterRequest): Observable<UserInfo> {
+    return this.http.post<UserInfo>('/api/auth/register', request);
+  }
+
+  login(request: LoginRequest): Observable<UserInfo> {
+    return this.http.post<UserInfo>('/api/auth/login', request);
+  }
+
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', null);
   }
 }

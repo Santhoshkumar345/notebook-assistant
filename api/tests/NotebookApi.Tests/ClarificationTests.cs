@@ -16,6 +16,7 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
     private const string Answered = """{"status":"answered","answer":"Chroma.","sources":[{"id":"a.md#0","source":"a.md","heading":"Setup","snippet":"Chroma is the store."}],"action":"retrieve","trace":[]}""";
 
     private readonly ApiFactory _factory;
+    private readonly TestUser _user;
     private readonly HttpClient _client;
     private StubUpstream Upstream => _factory.Upstream;
     private readonly Queue<string> _replies = new();
@@ -24,7 +25,8 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
     {
         _factory = factory;
         factory.ResetAsync().GetAwaiter().GetResult();
-        _client = factory.CreateClient();
+        _user = factory.SignUp();
+        _client = _user.Client;
         Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.OK, _replies.Dequeue());
     }
 
@@ -138,7 +140,7 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
     {
         _replies.Enqueue(Answered);
         var id = (await Json(await Ask("Which store is used?"))).GetProperty("conversationId").GetGuid();
-        var before = await _factory.Db(db => db.Messages.CountAsync());
+        var before = await _factory.DbFor(_user.Id, db => db.Messages.CountAsync());
         Upstream.Reset();
 
         var response = await Ask("relative dates", id, answersClarification: true);
@@ -146,7 +148,7 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         Assert.Empty(Upstream.Calls);
-        Assert.Equal(before, await _factory.Db(db => db.Messages.CountAsync()));
+        Assert.Equal(before, await _factory.DbFor(_user.Id, db => db.Messages.CountAsync()));
     }
 
     [Fact]
@@ -166,10 +168,10 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
     {
         var id = await AwaitingAnswer("How should that be handled?");
         Upstream.Respond = _ => throw new HttpRequestException("down");
-        var messagesBefore = await _factory.Db(db => db.Messages.CountAsync());
+        var messagesBefore = await _factory.DbFor(_user.Id, db => db.Messages.CountAsync());
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Ask("relative dates", id, answersClarification: true)).StatusCode);
-        Assert.Equal(messagesBefore, await _factory.Db(db => db.Messages.CountAsync()));
+        Assert.Equal(messagesBefore, await _factory.DbFor(_user.Id, db => db.Messages.CountAsync()));
 
         Upstream.Respond = _ => StubUpstream.Json(HttpStatusCode.OK, Answered);
         var retry = await Ask("relative dates", id, answersClarification: true); // still waiting for the answer, so the retry is accepted
@@ -203,6 +205,6 @@ public sealed class ClarificationTests : IClassFixture<ApiFactory>
         var response = await Ask("Which store is used?", mode: "pipeline");
 
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
-        Assert.Empty(await _factory.Db(db => db.Messages.ToListAsync()));
+        Assert.Empty(await _factory.DbFor(_user.Id, db => db.Messages.ToListAsync()));
     }
 }

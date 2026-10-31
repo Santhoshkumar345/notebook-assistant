@@ -9,11 +9,13 @@ namespace NotebookApi.Tests;
 public sealed class SchemaTests : IClassFixture<ApiFactory>
 {
     private readonly ApiFactory _factory;
+    private readonly TestUser _user;
 
     public SchemaTests(ApiFactory factory)
     {
         _factory = factory;
-        factory.CreateClient(); // starts the application, which applies the migrations
+        factory.ResetAsync().GetAwaiter().GetResult();
+        _user = factory.SignUp(); // starts the application, which applies the migrations, and gives the rows below an owner
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public sealed class SchemaTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Foreign_keys_are_enforced_so_a_turn_cannot_point_at_a_missing_conversation()
     {
-        await Assert.ThrowsAsync<DbUpdateException>(() => _factory.Db(async db =>
+        await Assert.ThrowsAsync<DbUpdateException>(() => _factory.DbFor(_user.Id, async db =>
         {
             db.Messages.Add(new ChatMessage { ConversationId = Guid.NewGuid(), Role = MessageRole.User, Text = "orphan" });
             await db.SaveChangesAsync();
@@ -60,7 +62,7 @@ public sealed class SchemaTests : IClassFixture<ApiFactory>
     {
         var earlier = new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
         var later = earlier.AddDays(40);
-        await _factory.Db(async db =>
+        await _factory.DbFor(_user.Id, async db =>
         {
             db.Conversations.AddRange(
                 new Conversation { Id = Guid.NewGuid(), Title = "later", CreatedAt = later, UpdatedAt = later },
@@ -68,8 +70,8 @@ public sealed class SchemaTests : IClassFixture<ApiFactory>
             await db.SaveChangesAsync();
         });
 
-        var titles = await _factory.Db(db => db.Conversations.OrderBy(c => c.UpdatedAt).Select(c => c.Title).ToListAsync());
-        var read = await _factory.Db(db => db.Conversations.Where(c => c.Title == "earlier").Select(c => c.CreatedAt).SingleAsync());
+        var titles = await _factory.DbFor(_user.Id, db => db.Conversations.OrderBy(c => c.UpdatedAt).Select(c => c.Title).ToListAsync());
+        var read = await _factory.DbFor(_user.Id, db => db.Conversations.Where(c => c.Title == "earlier").Select(c => c.CreatedAt).SingleAsync());
 
         Assert.Equal(["earlier", "later"], titles);
         Assert.Equal(earlier, read);

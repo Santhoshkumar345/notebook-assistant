@@ -1,0 +1,23 @@
+<section class="auth-card" aria-labelledby="login-heading">
+  <h1 id="login-heading">Sign in</h1>
+
+  @if (expired) {
+    <p class="banner info" role="status">Your session ended. Sign in again to continue.</p>
+  }
+
+  @if (auth.error(); as error) {
+    <p class="banner error" role="alert">{{ describeError(error) }}</p>
+  }
+
+  <form (submit)="submit($event)" novalidate>
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="username" required [value]="email()" (input)="set('email', $event)" />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required [value]="password()" (input)="set('password', $event)" />
+
+    <button type="submit" class="button primary" [disabled]="!canSubmit()">{{ auth.working() ? 'Signing in…' : 'Sign in' }}</button>
+  </form>
+
+  <p class="muted switch">No account yet? <a routerLink="/register">Create one</a></p>
+</section>

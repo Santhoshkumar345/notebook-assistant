@@ -28,6 +28,19 @@
   text-decoration: none;
 }
 
+.spacer {
+  flex: 1;
+}
+
+.who {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 nav {
   flex: 1;
   display: flex;

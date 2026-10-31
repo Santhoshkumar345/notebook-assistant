@@ -5,11 +5,11 @@ import pytest
 from fastapi.testclient import TestClient
 from google.genai import errors as genai_errors
 
-from app.api import MAX_DOC_CHARS, create_app
+from app.api import MAX_DOC_CHARS
 from app.generation import RagResult, Status
 from app.retrieval import Retriever
-from app.service import Service
 from app.store import VectorStore
+from tests import support
 
 GUIDE = "# Guide\n\n## Setup\n\nInstall the widget with pip install widget.\n\n## Usage\n\nRun widget --help for options."
 
@@ -21,9 +21,7 @@ def answer_from_first_hit(question, hits):
 
 
 def make_client(answerer=answer_from_first_hit):
-    store = VectorStore(collection="api_tests")
-    store.clear()
-    return TestClient(create_app(service=Service(store, answerer)))
+    return support.make_client(answerer)  # a fresh app whose tenant has a store of its own, sending the service key and tenant headers
 
 
 @pytest.fixture()
@@ -39,7 +37,7 @@ def test_an_empty_retriever_does_not_crash():
 
 
 def test_health_on_an_empty_service(client):
-    assert client.get("/health").json() == {"status": "ok", "documents": 0, "chunks": 0}
+    assert client.get("/health").json() == {"status": "ok"}  # no counts: they would span every tenant
 
 
 def test_ingest_then_ask_returns_the_cited_source(client):

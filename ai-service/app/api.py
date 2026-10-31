@@ -4,25 +4,32 @@ Handlers are plain `def`, not `async def`, on purpose: everything they do is blo
 the Gemini SDK). FastAPI runs `def` handlers in a threadpool; the same blocking work inside `async def` would freeze
 the event loop for every other request (see experiments/event_loop_blocking.py).
 
-Not built yet: authentication between callers and this service, and per-user isolation of documents.
+Who may call, and whose data it is:
+- Every route needs the shared service key (X-Service-Key). Only the .NET API holds it, so only the .NET API can name a tenant.
+  The app refuses to start without a key: failing closed is the point of having one.
+- Every route that touches documents needs a tenant (X-Tenant-ID, the user's id as 32 hex characters), and gets that tenant's own
+  collection and keyword index (see tenants.py). /health needs a key but no tenant and reports no counts.
 """
 
 import contextvars
+import hmac
 import logging
+import os
 import re
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path as FsPath
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Path, Request
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
 from fastapi.responses import JSONResponse, Response
 from google.genai import errors as genai_errors
 from pydantic import BaseModel, Field
 
 from app.generation import Status
 from app.service import Service
-from app.store import VectorStore
+from app.tenants import InvalidTenant, Tenants, default_tenants
 
 logger = logging.getLogger("notebook.api")
 
@@ -90,16 +97,38 @@ def configure_logging() -> None:
         root.setLevel(logging.INFO)
 
 
-def create_app(service: Service | None = None, data_dir: str = DEFAULT_DATA_DIR) -> FastAPI:
+MIN_KEY_CHARS = 16
+
+
+def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR, service_key: str | None = None) -> FastAPI:
     configure_logging()
+
+    expected_key = service_key or os.environ.get("AI_SERVICE_KEY", "")
+    if not expected_key:
+        raise RuntimeError("AI_SERVICE_KEY is not set. The AI service refuses to start without a service key, because every document it holds would be open to anyone who can reach it.")
+    if len(expected_key) < MIN_KEY_CHARS:
+        raise RuntimeError(f"The service key must be at least {MIN_KEY_CHARS} characters.")
+    expected = expected_key.encode()
+
+    def require_service_key(x_service_key: str | None = Header(default=None)) -> None:
+        # compare_digest takes the same time wherever the first difference is, so the key cannot be guessed a character at a time.
+        if not hmac.compare_digest((x_service_key or "").encode(), expected):
+            raise HTTPException(status_code=401, detail="Missing or invalid service key.")
+
+    def tenant_service(request: Request, x_tenant_id: str | None = Header(default=None)) -> Service:
+        try:
+            return request.app.state.tenants.get(x_tenant_id or "")
+        except InvalidTenant:
+            raise HTTPException(status_code=400, detail="A valid X-Tenant-ID header is required.") from None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        # Heavy objects (embedding model, vector store, indexes) are built once at startup, never per request.
-        app.state.service = service or Service(VectorStore(path=data_dir))
+        # Heavy objects (the vector client, and per tenant the embedding-backed store and indexes) are built once, never per request.
+        app.state.tenants = tenants or default_tenants(data_dir)
         yield
 
-    app = FastAPI(title="Notebook Assistant - AI service", version="0.1.0", lifespan=lifespan)
+    # The key is a dependency of the whole app, so no route can be added without it and it is checked before anything else (tenant included).
+    app = FastAPI(title="Notebook Assistant - AI service", version="0.1.0", lifespan=lifespan, dependencies=[Depends(require_service_key)])
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
@@ -120,35 +149,31 @@ def create_app(service: Service | None = None, data_dir: str = DEFAULT_DATA_DIR)
         logger.error("upstream model error code=%s", exc.code)  # details stay in the log, not in the response
         return JSONResponse({"detail": "The language model returned an error."}, status_code=502)
 
-    def svc(request: Request) -> Service:
-        return request.app.state.service
-
     @app.get("/health")
-    def health(request: Request):
-        s = svc(request)
-        return {"status": "ok", "documents": len(s.documents()), "chunks": s.chunk_count()}
+    def health():
+        return {"status": "ok"}  # no counts: this answers to anyone holding the key, and counts would span every tenant
 
     @app.get("/documents")
-    def list_documents(request: Request) -> dict[str, int]:
-        return svc(request).documents()
+    def list_documents(service: Service = Depends(tenant_service)) -> dict[str, int]:
+        return service.documents()
 
     @app.post("/documents", response_model=DocumentOut, status_code=201)
-    def add_document(body: DocumentIn, request: Request):
-        return DocumentOut(name=body.name, chunks=svc(request).ingest(body.name, body.content))
+    def add_document(body: DocumentIn, service: Service = Depends(tenant_service)):
+        return DocumentOut(name=body.name, chunks=service.ingest(body.name, body.content))
 
     @app.delete("/documents/{name}", status_code=204)
-    def delete_document(request: Request, name: str = Path(pattern=NAME_PATTERN)):
-        if svc(request).delete(name) == 0:
+    def delete_document(name: str = Path(pattern=NAME_PATTERN), service: Service = Depends(tenant_service)):
+        if service.delete(name) == 0:
             raise HTTPException(status_code=404, detail="No such document")
         return Response(status_code=204)
 
     @app.post("/ask", response_model=AskOut)
-    def ask(body: AskIn, request: Request):
+    def ask(body: AskIn, service: Service = Depends(tenant_service)):
         if body.mode == "agent":
-            r = svc(request).ask_agent(body.question, body.k)
+            r = service.ask_agent(body.question, body.k)
             status, answer, sources, action, trace, detail = r.status, r.answer, r.sources, r.action, r.trace, "; ".join(r.trace[-1:])
         else:
-            r = svc(request).ask(body.question, body.k)
+            r = service.ask(body.question, body.k)
             status, answer, sources, action, trace, detail = r.status.value, r.answer, r.sources, "retrieve", [], r.detail
         if status == "error":
             raise HTTPException(status_code=502, detail=f"The model returned no usable output ({detail}).")
@@ -160,4 +185,8 @@ def create_app(service: Service | None = None, data_dir: str = DEFAULT_DATA_DIR)
     return app
 
 
-app = create_app()  # uvicorn app.api:app  (nothing heavy happens until startup)
+def app_from_env() -> FastAPI:
+    """uvicorn app.api:app_from_env --factory. Reads AI_SERVICE_KEY (and GEMINI_API_KEY) from the environment or ai-service/.env.
+    A factory, not a module-level `app`, so importing this module never needs a secret and never starts anything."""
+    load_dotenv(FsPath(__file__).resolve().parent.parent / ".env")
+    return create_app()

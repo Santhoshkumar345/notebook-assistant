@@ -30,10 +30,10 @@ describe('ApiClient', () => {
   afterEach(() => http.verify());
 
   describe('health', () => {
-    it('reports ok with the counts', async () => {
+    it('reports ok, and carries no counts even if the answer had some', async () => {
       const result = firstValueFrom(client.health());
       http.expectOne('/api/health').flush({ status: 'ok', ai: { status: 'ok', documents: 3, chunks: 40 } });
-      expect(await result).toEqual({ state: 'ok', documents: 3, chunks: 40 });
+      expect(await result).toEqual({ state: 'ok' });
     });
 
     it('reports degraded when the API answers 503 with its own request id', async () => {
@@ -88,6 +88,34 @@ describe('ApiClient', () => {
       const result = firstValueFrom(client.sync());
       http.expectOne({ method: 'POST', url: '/api/documents/sync' }).flush({ reindexed: 2, removedFromIndex: ['x.md'] });
       expect(await result).toEqual({ reindexed: 2, removedFromIndex: ['x.md'] });
+    });
+  });
+
+  describe('accounts', () => {
+    it('asks who is signed in', async () => {
+      const result = firstValueFrom(client.me());
+      http.expectOne({ method: 'GET', url: '/api/auth/me' }).flush({ id: 'u-1', email: 'person@example.test' });
+      expect(await result).toEqual({ id: 'u-1', email: 'person@example.test' });
+    });
+
+    it('registers with the email, the password and the invite code', async () => {
+      const result = firstValueFrom(client.register({ email: 'new@example.test', password: 'a long enough password', inviteCode: 'open-sesame-123' }));
+      const request = http.expectOne({ method: 'POST', url: '/api/auth/register' });
+      expect(request.request.body).toEqual({ email: 'new@example.test', password: 'a long enough password', inviteCode: 'open-sesame-123' });
+      request.flush({ id: 'u-1', email: 'new@example.test' }, { status: 201, statusText: 'Created' });
+      expect((await result).email).toBe('new@example.test');
+    });
+
+    it('signs in and signs out', async () => {
+      const login = firstValueFrom(client.login({ email: 'person@example.test', password: 'a long enough password' }));
+      const request = http.expectOne({ method: 'POST', url: '/api/auth/login' });
+      expect(request.request.body).toEqual({ email: 'person@example.test', password: 'a long enough password' });
+      request.flush({ id: 'u-1', email: 'person@example.test' });
+      await login;
+
+      const logout = firstValueFrom(client.logout());
+      http.expectOne({ method: 'POST', url: '/api/auth/logout' }).flush(null, { status: 204, statusText: 'No Content' });
+      await logout;
     });
   });
 

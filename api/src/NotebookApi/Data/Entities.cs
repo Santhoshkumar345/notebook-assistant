@@ -20,9 +20,12 @@ public enum MessageRole
 /// The source of truth for an uploaded document. The AI service's vector index is derived from this and can be rebuilt
 /// from it (see DocumentService.SyncAsync), which is why the full text is kept here.
 /// </summary>
-public sealed class StoredDocument
+public sealed class StoredDocument : IOwned
 {
     public int Id { get; set; }
+    /// <summary>The user this belongs to. Stamped on save and filtered on read by NotebookDb; never set from a request.</summary>
+    public Guid UserId { get; set; }
+
     public required string Name { get; set; }
     public required string Content { get; set; }
     public DocumentStatus Status { get; set; }
@@ -35,9 +38,12 @@ public sealed class StoredDocument
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class Conversation
+public sealed class Conversation : IOwned
 {
     public Guid Id { get; set; }
+    /// <summary>The user this belongs to. Stamped on save and filtered on read by NotebookDb; never set from a request.</summary>
+    public Guid UserId { get; set; }
+
     public required string Title { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -45,9 +51,12 @@ public sealed class Conversation
 }
 
 /// <summary>One turn. User turns hold the question; assistant turns hold the answer (or the clarifying question) and what it cited.</summary>
-public sealed class ChatMessage
+public sealed class ChatMessage : IOwned
 {
     public int Id { get; set; }
+    /// <summary>The user this belongs to. Stamped on save and filtered on read by NotebookDb; never set from a request.</summary>
+    public Guid UserId { get; set; }
+
     public Guid ConversationId { get; set; }
     public MessageRole Role { get; set; }
     public required string Text { get; set; }

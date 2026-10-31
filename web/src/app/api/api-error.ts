@@ -4,8 +4,11 @@ import { catchError, throwError } from 'rxjs';
 export type ApiErrorKind =
   | 'network' // nothing from the API answered (it is down, or the dev proxy could not reach it)
   | 'validation' // 400: the request broke a rule
+  | 'unauthorized' // 401: not signed in, or the sign-in details were wrong
+  | 'forbidden' // 403
   | 'not-found' // 404
   | 'conflict' // 409: the request does not fit the current state (for example, nothing is waiting for that answer)
+  | 'rate-limited' // 429: too many requests, or too many failed sign-ins
   | 'busy' // 503: the AI service is busy or unreachable
   | 'timeout' // 504: the AI service took too long
   | 'upstream' // 502: the AI service answered with something unusable
@@ -46,7 +49,7 @@ export function toApiError(response: HttpErrorResponse): ApiError {
   const retryAfterSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null;
 
   const make = (kind: ApiErrorKind, fallback: string) =>
-    new ApiError(kind, response.status, title || fallback, requestId, kind === 'busy' ? retryAfterSeconds : null, fieldErrors);
+    new ApiError(kind, response.status, title || fallback, requestId, kind === 'busy' || kind === 'rate-limited' ? retryAfterSeconds : null, fieldErrors);
 
   // The API stamps its request id on every response, errors included. A 5xx without one came from something in front of it
   // (the dev proxy, a gateway) that could not reach the API at all.
@@ -57,10 +60,16 @@ export function toApiError(response: HttpErrorResponse): ApiError {
   switch (response.status) {
     case 400:
       return make('validation', 'The request was not accepted.');
+    case 401:
+      return make('unauthorized', 'Sign in required.');
+    case 403:
+      return make('forbidden', 'You do not have access to that.');
     case 404:
       return make('not-found', 'Not found.');
     case 409:
       return make('conflict', 'The request does not fit the current state.');
+    case 429:
+      return make('rate-limited', 'Too many requests.');
     case 502:
       return make('upstream', 'The AI service returned something unusable.');
     case 503:
@@ -90,10 +99,17 @@ export function describeError(error: ApiError): string {
       return 'Cannot reach the API. Check that it is running, then try again.';
     case 'validation':
       return error.fieldErrors.length > 0 ? error.fieldErrors.join(' ') : error.message;
+    case 'unauthorized':
+    case 'forbidden':
+      return error.message; // the server's own words: "Email or password is incorrect.", "A valid invite code is required."
+    case 'rate-limited': {
+      const wait = error.retryAfterSeconds === null ? '' : ` Try again in about ${error.retryAfterSeconds} seconds.`;
+      return `Too many attempts.${wait}`;
+    }
     case 'not-found':
       return 'That item no longer exists. The list has been refreshed.';
     case 'conflict':
-      return 'The conversation is no longer waiting for that answer. Ask your question again.';
+      return error.message; // 409 means different things on different routes (a taken email, a conversation not waiting for an answer): the server says which
     case 'busy': {
       const wait = error.retryAfterSeconds === null ? '' : ` Try again in about ${error.retryAfterSeconds} seconds.`;
       return `The AI service is busy or not reachable.${wait}`;

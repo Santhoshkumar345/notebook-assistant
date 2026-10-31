@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NotebookApi.Clients;
 using NotebookApi.Contracts;
@@ -6,6 +7,7 @@ namespace NotebookApi.Controllers;
 
 [ApiController]
 [Route("api/health")]
+[AllowAnonymous]
 public sealed class HealthController(IAiServiceClient ai, ILogger<HealthController> logger) : ControllerBase
 {
     /// <summary>

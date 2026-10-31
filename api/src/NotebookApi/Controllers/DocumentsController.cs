@@ -6,6 +6,7 @@ namespace NotebookApi.Controllers;
 
 [ApiController]
 [Route("api/documents")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemContent.Type)]
 public sealed class DocumentsController(DocumentService documents) : ControllerBase
 {
     /// <summary>The stored documents, with whether each one made it into the search index (status Indexed) or needs attention (Failed).</summary>

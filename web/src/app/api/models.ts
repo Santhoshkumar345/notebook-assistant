@@ -10,6 +10,9 @@ export type DocumentIn = Schemas['DocumentIn'];
 export type DocumentStatus = Schemas['DocumentStatus'];
 export type SyncResult = Schemas['SyncResult'];
 export type HealthOut = Schemas['HealthOut'];
+export type UserInfo = Schemas['UserInfo'];
+export type RegisterRequest = Schemas['RegisterIn'];
+export type LoginRequest = Schemas['LoginIn'];
 
 export type AnswerStatus = Schemas['AnswerStatus'];
 export type AskResponse = Schemas['AskResponse'];
@@ -27,6 +30,6 @@ export type AskRequest = Omit<Schemas['AskIn'], 'mode'> & { mode: AskMode };
 /** What the app knows about the system: the API and, behind it, the AI service. */
 export type Health =
   | { state: 'checking' }
-  | { state: 'ok'; documents: number; chunks: number }
+  | { state: 'ok' } // counts are not part of it: they would span every user, so the page shows the signed-in user's own
   | { state: 'degraded' } // the API answers, the AI service behind it does not
   | { state: 'down' }; // the API itself cannot be reached

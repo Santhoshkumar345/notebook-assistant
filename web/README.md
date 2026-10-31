@@ -37,14 +37,16 @@ To accept an intended API change: `UPDATE_OPENAPI=1 dotnet test` in `../api`, th
 ```
 src/app/
   api/         ApiClient (typed HttpClient calls), ApiError + interceptor (every failure becomes one error type), generated schema.d.ts
+  auth/        AuthStore (who is signed in, found by asking the server), route guards, session-expiry interceptor, sign-in and registration pages,
+               safe-return-url (an open-redirect guard), credential-checks (browser-side rules, tested against the API contract)
   documents/   DocumentsStore (state and the one-write-at-a-time rule), DocumentsPage, file-checks (browser-side rules)
   chat/        ChatStore (conversations, the request in flight, stop and retry, whether a reply answers a clarifying question),
                ChatPage with Composer, MessageView (one rendering per answer status), ConversationList, ThinkingIndicator, question-checks
   shell/       HealthBadge (is the API up, is the AI service behind it up; re-checks after document changes and finished questions)
 ```
 
-`file-checks.spec.ts` and `question-checks.spec.ts` read the OpenAPI snapshot and fail if the browser's file-name pattern, size limit or question length limits differ from the server's.
+`file-checks.spec.ts`, `question-checks.spec.ts` and `credential-checks.spec.ts` read the OpenAPI snapshot and fail if the browser's file-name pattern, size limit, question length or password length limits differ from the server's.
 
 ## Not built yet
 
-Authentication, end-to-end browser tests, streaming answers, Markdown rendering of answers, multi-file upload.
+End-to-end browser tests, streaming answers, Markdown rendering of answers, multi-file upload, password reset and email verification (the API cannot send email).

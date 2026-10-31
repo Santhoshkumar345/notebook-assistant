@@ -68,8 +68,12 @@ export class HealthBadge {
     switch (health.state) {
       case 'checking':
         return 'Checking…';
-      case 'ok':
-        return `Ready: ${health.documents} ${health.documents === 1 ? 'document' : 'documents'} searchable`;
+      case 'ok': {
+        // The document count is the signed-in person's own (from their documents), never a figure for the whole system.
+        if (!this.documents.loaded()) return 'Ready';
+        const count = this.documents.documents().filter((d) => d.status === 'Indexed').length;
+        return `Ready: ${count} ${count === 1 ? 'document' : 'documents'} searchable`;
+      }
       case 'degraded':
         return 'AI service unavailable';
       case 'down':

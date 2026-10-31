@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
 from app.agent import Action, AgentDeps, Route, build_agent
-from app.api import create_app
 from app.generation import RagResult, Status
 from app.service import Service
+from tests import support
 from app.store import Hit, VectorStore
 
 DOCS = ["alpha.md", "beta.md"]
@@ -138,10 +138,7 @@ def test_an_empty_context_costs_no_answer_model_call():
 
 def test_the_api_exposes_the_agent_with_action_and_trace():
     spy = Spy(route=Route(action=Action.clarify, clarifying_question="Which one?"))
-    store = VectorStore(collection="agent_api_tests")
-    store.clear()
-    service = Service(store, agent_deps_factory=lambda retrieve, st, answer: spy.deps())
-    with TestClient(create_app(service=service)) as client:
+    with support.make_client(agent_deps_factory=lambda retrieve, st, answer: spy.deps()) as client:
         reply = client.post("/ask", json={"question": "what was the limit?", "mode": "agent"})
         plain = client.post("/ask", json={"question": "what was the limit?"})
     body = reply.json()

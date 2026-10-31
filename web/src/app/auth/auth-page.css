@@ -1,0 +1,69 @@
+.auth-card {
+  max-width: 26rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.auth-card h1 {
+  margin: 0 0 1rem;
+}
+
+form {
+  display: grid;
+  gap: 0.35rem;
+}
+
+label {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.help {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.help.problem {
+  color: var(--danger);
+}
+
+button[type='submit'] {
+  margin-top: 1rem;
+}
+
+.switch {
+  margin: 1.25rem 0 0;
+  text-align: center;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* An inline link in a sentence is exempt from the 24 px target guideline, but this one is the main way between the two forms. */
+.switch a {
+  display: inline-block;
+  padding: 0.3rem 0.25rem;
+}

@@ -1,24 +1,28 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NotebookApi.Clients;
 using NotebookApi.Contracts;
 using NotebookApi.Data;
+using NotebookApi.Infrastructure;
 
 namespace NotebookApi.Services;
 
 /// <summary>
-/// One writer at a time for document changes. The database and the AI service cannot share a transaction, so two overlapping
+/// One writer at a time per user for document changes. The database and the AI service cannot share a transaction, so two overlapping
 /// uploads of the same name could leave one version in the database and the other in the index. Documents are added rarely and
 /// each takes seconds, so a single gate is simpler and safer than finer locking. It protects one running instance only; a second
 /// instance would need a database-level lock.
 /// </summary>
 public sealed class DocumentWriteGate
 {
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    // One gate per user: a slow upload must not make other people wait. (One semaphore is kept for every user who has ever written.)
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _gates = new();
 
-    public async Task<IDisposable> EnterAsync(CancellationToken ct)
+    public async Task<IDisposable> EnterAsync(Guid user, CancellationToken ct)
     {
-        await _gate.WaitAsync(ct);
-        return new Releaser(_gate);
+        var gate = _gates.GetOrAdd(user, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        return new Releaser(gate);
     }
 
     private sealed class Releaser(SemaphoreSlim gate) : IDisposable
@@ -32,8 +36,10 @@ public sealed class DocumentWriteGate
 /// Pending, and is confirmed only once the AI service accepts it. A failure leaves a Failed row that can be re-indexed, never a
 /// document that exists in one place and silently not in the other.
 /// </summary>
-public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProvider clock, DocumentWriteGate gate)
+public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProvider clock, DocumentWriteGate gate, ICurrentUser currentUser)
 {
+    private Guid UserId => currentUser.Id ?? throw new InvalidOperationException("Documents can only be changed by a signed-in user.");
+
     public async Task<IReadOnlyList<DocumentInfo>> ListAsync(CancellationToken ct)
     {
         // Content.Length is computed by the database, so the (up to 200,000-character) text is not loaded for a list.
@@ -46,7 +52,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
     /// <summary>Adds a document, or replaces the one with the same name. Throws <see cref="AiServiceException"/> if the index could not be updated; the row is then Failed.</summary>
     public async Task<(DocumentInfo Document, bool Created)> UpsertAsync(DocumentIn input, CancellationToken ct)
     {
-        using var _ = await gate.EnterAsync(ct);
+        using var _ = await gate.EnterAsync(UserId, ct);
 
         var row = await db.Documents.SingleOrDefaultAsync(d => d.Name == input.Name, ct);
         var created = row is null;
@@ -71,7 +77,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
     /// <summary>Re-sends one stored document to the AI service. Null if there is no such document.</summary>
     public async Task<DocumentInfo?> ReindexAsync(string name, CancellationToken ct)
     {
-        using var _ = await gate.EnterAsync(ct);
+        using var _ = await gate.EnterAsync(UserId, ct);
 
         var row = await db.Documents.SingleOrDefaultAsync(d => d.Name == name, ct);
         if (row is null) return null;
@@ -82,7 +88,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
     /// <summary>Removes the document from the index first, then from the database, so a failure never leaves a row that claims a document the index no longer has (or the reverse). Safe to repeat.</summary>
     public async Task<bool> DeleteAsync(string name, CancellationToken ct)
     {
-        using var _ = await gate.EnterAsync(ct);
+        using var _ = await gate.EnterAsync(UserId, ct);
 
         var row = await db.Documents.SingleOrDefaultAsync(d => d.Name == name, ct);
         if (row is null) return false;
@@ -99,7 +105,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
     /// </summary>
     public async Task<SyncResult> SyncAsync(CancellationToken ct)
     {
-        using var _ = await gate.EnterAsync(ct);
+        using var _ = await gate.EnterAsync(UserId, ct);
 
         var upstream = await ai.GetDocumentsAsync(ct); // first, so an unreachable service fails before anything is changed
         var rows = await db.Documents.OrderBy(d => d.Name).ToListAsync(ct);

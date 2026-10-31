@@ -20,9 +20,9 @@ class Hit:
 
 
 class VectorStore:
-    def __init__(self, path: str | None = None, collection: str = "notebook"):
-        """In-memory by default; pass a directory path for a persistent store."""
-        self._client = chromadb.PersistentClient(path=path) if path else chromadb.EphemeralClient()
+    def __init__(self, path: str | None = None, collection: str = "notebook", client=None):
+        """In-memory by default; pass a directory path for a persistent store, or a Chroma client to share one between stores."""
+        self._client = client or (chromadb.PersistentClient(path=path) if path else chromadb.EphemeralClient())
         self._name = collection
         self._col = self._open()
 

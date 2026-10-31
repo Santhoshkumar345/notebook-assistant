@@ -1,11 +1,18 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="topbar">
   <a class="brand" routerLink="/">Notebook Assistant</a>
-  <nav aria-label="Main">
-    <a routerLink="/chat" routerLinkActive="active" ariaCurrentWhenActive="page">Chat</a>
-    <a routerLink="/documents" routerLinkActive="active" ariaCurrentWhenActive="page">Documents</a>
-  </nav>
-  <app-health-badge />
+  @if (auth.user(); as user) {
+    <nav aria-label="Main">
+      <a routerLink="/chat" routerLinkActive="active" ariaCurrentWhenActive="page">Chat</a>
+      <a routerLink="/documents" routerLinkActive="active" ariaCurrentWhenActive="page">Documents</a>
+    </nav>
+    <app-health-badge />
+    <span class="who" title="Signed in as {{ user.email }}">{{ user.email }}</span>
+    <button type="button" class="button small" (click)="auth.logout()">Sign out</button>
+  } @else {
+    <span class="spacer"></span>
+    <app-health-badge />
+  }
 </header>
 <main id="content" tabindex="-1">
   <router-outlet />

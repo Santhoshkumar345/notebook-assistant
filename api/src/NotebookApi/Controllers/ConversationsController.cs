@@ -6,6 +6,7 @@ namespace NotebookApi.Controllers;
 
 [ApiController]
 [Route("api/conversations")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, ProblemContent.Type)]
 public sealed class ConversationsController(ConversationService conversations) : ControllerBase
 {
     /// <summary>Most recently active first. limit is 1 to 100 (default 50); values outside that range are clamped.</summary>
