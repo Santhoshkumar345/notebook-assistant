@@ -1,0 +1,129 @@
+<section aria-labelledby="documents-heading">
+  <div class="page-head">
+    <div>
+      <h1 id="documents-heading">Documents</h1>
+      <p class="muted">Markdown files the assistant answers from. Uploading a file with an existing name replaces it.</p>
+    </div>
+    <div class="actions">
+      <label class="button primary file-button" [class.disabled]="store.working() !== null">
+        Upload .md file
+        <input type="file" accept=".md,text/markdown" (change)="onFileInput($event)" [disabled]="store.working() !== null" />
+      </label>
+      <button
+        type="button"
+        class="button"
+        (click)="store.sync()"
+        [disabled]="store.working() !== null"
+        title="Make the search index match this list: removes stray entries and re-sends every document"
+      >
+        Sync index
+      </button>
+    </div>
+  </div>
+
+  <div class="live" aria-live="polite">
+    @if (store.working(); as work) {
+      <p class="banner info">{{ work }}…</p>
+    }
+    @if (store.notice(); as notice) {
+      <p class="banner success">
+        {{ notice }}
+        <button type="button" class="link" (click)="store.dismissNotice()">Dismiss</button>
+      </p>
+    }
+  </div>
+
+  @if (fileProblem(); as problem) {
+    <p class="banner error" role="alert">{{ problem }}</p>
+  }
+
+  @if (store.actionError(); as error) {
+    <div class="banner error" role="alert">
+      <strong>{{ describeError(error) }}</strong>
+      @if (error.requestId) {
+        <span class="muted">Request id <code>{{ error.requestId }}</code></span>
+      }
+      <button type="button" class="link" (click)="store.dismissActionError()">Dismiss</button>
+    </div>
+  }
+
+  @if (confirming(); as pending) {
+    <div class="banner warn" role="alertdialog" aria-labelledby="confirm-text">
+      @if (pending.kind === 'replace') {
+        <span id="confirm-text"><strong>{{ pending.name }}</strong> already exists. Replace it with this file?</span>
+      } @else {
+        <span id="confirm-text">Delete <strong>{{ pending.name }}</strong>? It is removed from the list and from the search index.</span>
+      }
+      <span class="actions">
+        <button type="button" class="button danger" (click)="confirm()">{{ pending.kind === 'replace' ? 'Replace' : 'Delete' }}</button>
+        <button type="button" class="button" (click)="cancel()">Cancel</button>
+      </span>
+    </div>
+  }
+
+  @if (store.loadError(); as error) {
+    <div class="banner error" role="alert">
+      <strong>Could not load documents.</strong> {{ describeError(error) }}
+      @if (error.requestId) {
+        <span class="muted">Request id <code>{{ error.requestId }}</code></span>
+      }
+      <button type="button" class="button" (click)="store.load()" [disabled]="store.loading()">Retry</button>
+    </div>
+  }
+
+  @if (store.loaded()) {
+    @if (store.documents().length === 0) {
+      <div class="empty">
+        <h2>No documents yet</h2>
+        <p class="muted">Upload a Markdown file to get started. Its text is stored here and indexed for search.</p>
+      </div>
+    } @else {
+      @if (store.failedCount() > 0) {
+        <p class="banner warn">
+          {{ store.failedCount() }} {{ store.failedCount() === 1 ? 'document is' : 'documents are' }} not searchable. Re-index to retry.
+        </p>
+      }
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Uploaded documents</caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="num">Chunks</th>
+              <th scope="col" class="num">Characters</th>
+              <th scope="col">Updated</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (document of store.documents(); track document.name) {
+              <tr>
+                <th scope="row" class="name">{{ document.name }}</th>
+                <td>
+                  <span class="badge" [class]="'badge ' + document.status.toLowerCase()">{{ document.status }}</span>
+                  @if (document.status === 'Failed') {
+                    <small class="muted block">{{ failureHint(document) }}</small>
+                  }
+                </td>
+                <td class="num">{{ document.chunks ?? '-' }}</td>
+                <td class="num">{{ document.chars | number }}</td>
+                <td>{{ document.updatedAt | date: 'medium' }}</td>
+                <td class="row-actions">
+                  <button type="button" class="button small" (click)="store.reindex(document.name)" [disabled]="store.working() !== null" [attr.aria-label]="'Re-index ' + document.name">
+                    Re-index
+                  </button>
+                  <button type="button" class="button small" (click)="askDelete(document.name)" [disabled]="store.working() !== null" [attr.aria-label]="'Delete ' + document.name">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else if (store.loading()) {
+    <p class="muted">Loading documents…</p>
+  }
+</section>

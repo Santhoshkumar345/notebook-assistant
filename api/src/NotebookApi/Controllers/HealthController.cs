@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NotebookApi.Clients;
+using NotebookApi.Contracts;
 
 namespace NotebookApi.Controllers;
 
@@ -12,16 +13,18 @@ public sealed class HealthController(IAiServiceClient ai, ILogger<HealthControll
     /// A health check reports a problem instead of failing with an error, so a monitor can read the body.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken ct)
+    [ProducesResponseType<HealthOut>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType<HealthOut>(StatusCodes.Status503ServiceUnavailable, "application/json")]
+    public async Task<ActionResult<HealthOut>> Get(CancellationToken ct)
     {
         try
         {
-            return Ok(new { status = "ok", ai = await ai.GetHealthAsync(ct) });
+            return new HealthOut("ok", await ai.GetHealthAsync(ct));
         }
         catch (AiServiceException failure)
         {
             logger.LogWarning("Health check: the AI service is not healthy ({Failure})", failure.Failure);
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { status = "degraded", ai = (object?)null });
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new HealthOut("degraded", null));
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NotebookApi.Data;
 
 namespace NotebookApi.Contracts;
 
@@ -38,10 +39,19 @@ public sealed record AskOut(string Status, string Answer, IReadOnlyList<SourceOu
 
 public sealed record AiHealth(string Status, int Documents, int Chunks);
 
+/// <summary>Status is "ok", or "degraded" (HTTP 503) when the AI service cannot be reached, in which case Ai is null.</summary>
+public sealed record HealthOut(string Status, AiHealth? Ai);
+
+/// <summary>Media type of every error body (RFC 7807). Declared on the controllers so the OpenAPI document, and the types generated from it, describe the errors too.</summary>
+public static class ProblemContent
+{
+    public const string Type = "application/problem+json";
+}
+
 // ----------------------------------------------------------------- what the API itself returns (persisted state)
 
 /// <summary>A document as stored here. Status is Pending, Indexed or Failed; see DocumentStatus.</summary>
-public sealed record DocumentInfo(string Name, int Chars, int? Chunks, string Status, string? Error, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record DocumentInfo(string Name, int Chars, int? Chunks, DocumentStatus Status, string? Error, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
 /// <summary>What a sync did: how many documents were re-sent to the AI service, and which names it held that this API did not know about (now removed).</summary>
 public sealed record SyncResult(int Reindexed, IReadOnlyList<string> RemovedFromIndex);

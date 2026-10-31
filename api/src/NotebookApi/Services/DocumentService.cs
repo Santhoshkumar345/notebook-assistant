@@ -40,7 +40,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
         var rows = await db.Documents.AsNoTracking().OrderBy(d => d.Name)
             .Select(d => new { d.Name, Chars = d.Content.Length, d.Chunks, d.Status, d.Error, d.CreatedAt, d.UpdatedAt })
             .ToListAsync(ct);
-        return rows.Select(r => new DocumentInfo(r.Name, r.Chars, r.Chunks, r.Status.ToString(), r.Error, r.CreatedAt, r.UpdatedAt)).ToList();
+        return rows.Select(r => new DocumentInfo(r.Name, r.Chars, r.Chunks, r.Status, r.Error, r.CreatedAt, r.UpdatedAt)).ToList();
     }
 
     /// <summary>Adds a document, or replaces the one with the same name. Throws <see cref="AiServiceException"/> if the index could not be updated; the row is then Failed.</summary>
@@ -143,5 +143,5 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
     }
 
     private static DocumentInfo ToInfo(StoredDocument d) =>
-        new(d.Name, d.Content.Length, d.Chunks, d.Status.ToString(), d.Error, d.CreatedAt, d.UpdatedAt);
+        new(d.Name, d.Content.Length, d.Chunks, d.Status, d.Error, d.CreatedAt, d.UpdatedAt);
 }

@@ -10,11 +10,18 @@ public sealed class DocumentsController(DocumentService documents) : ControllerB
 {
     /// <summary>The stored documents, with whether each one made it into the search index (status Indexed) or needs attention (Failed).</summary>
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<DocumentInfo>>(StatusCodes.Status200OK, "application/json")]
     public async Task<ActionResult<IReadOnlyList<DocumentInfo>>> List(CancellationToken ct) =>
         Ok(await documents.ListAsync(ct));
 
     /// <summary>Add a markdown document (201) or replace one with the same name (200). If the AI service cannot index it the document is kept with status Failed and the call fails; POST .../reindex retries.</summary>
     [HttpPost]
+    [ProducesResponseType<DocumentInfo>(StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType<DocumentInfo>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout, ProblemContent.Type)]
     public async Task<ActionResult<DocumentInfo>> Add(DocumentIn document, CancellationToken ct)
     {
         var (stored, created) = await documents.UpsertAsync(document, ct);
@@ -25,6 +32,12 @@ public sealed class DocumentsController(DocumentService documents) : ControllerB
 
     /// <summary>Re-send a stored document to the AI service, for example after a Failed upload.</summary>
     [HttpPost("{name}/reindex")]
+    [ProducesResponseType<DocumentInfo>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout, ProblemContent.Type)]
     public async Task<ActionResult<DocumentInfo>> Reindex(string name, CancellationToken ct)
     {
         if (InvalidName(name) is { } invalid) return invalid;
@@ -35,10 +48,20 @@ public sealed class DocumentsController(DocumentService documents) : ControllerB
 
     /// <summary>Make the AI service's index match what is stored here: remove documents it holds that are not stored, and re-send every stored one. Safe to repeat.</summary>
     [HttpPost("sync")]
+    [ProducesResponseType<SyncResult>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout, ProblemContent.Type)]
     public async Task<ActionResult<SyncResult>> Sync(CancellationToken ct) =>
         Ok(await documents.SyncAsync(ct));
 
     [HttpDelete("{name}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout, ProblemContent.Type)]
     public async Task<IActionResult> Delete(string name, CancellationToken ct)
     {
         if (InvalidName(name) is { } invalid) return invalid;

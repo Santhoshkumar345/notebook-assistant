@@ -7,7 +7,7 @@ are choices made on principle that still need to be validated by the evaluation 
 
 | Layer | Technology | Status |
 |---|---|---|
-| UI | Angular | planned |
+| UI | Angular 21 (standalone, signals, zoneless): shell and documents page built; chat page planned | shell built |
 | Primary backend | ASP.NET Core: edge (validation, error translation, correlation id), persistence (documents, chat history; EF Core + SQLite) built; users and streaming planned | edge + persistence built |
 | AI service | Python, FastAPI | in progress |
 | Orchestration (agent layer) | LangGraph: route, retrieve, summarize, clarify, one bounded retry; opt-in via `mode=agent` | built |
@@ -200,3 +200,24 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   - The migration runs at startup, which suits one instance. Several instances starting together would need it as a separate deploy step, and the write gate would need a database-level lock.
   - SQLite migrations are provider-specific: moving to SQL Server or Azure SQL means regenerating them.
   - Nothing limits how many documents or conversations exist; abuse limits belong with authentication.
+
+### 2026-10-31 - Angular shell (step 3): a client that cannot silently drift from the API
+
+- **Chosen:**
+  - **The browser talks to one origin.** The dev server proxies `/api` to the .NET API, so there is no CORS configuration to get wrong. A production deployment should also serve both from one origin.
+  - **Types are generated from the API's OpenAPI document** (`openapi-typescript`, no Java), and the document is committed as `api/openapi/v1.json`. A .NET test fails when the live API differs from it, and a web test fails when the browser's file rules differ from the server's (read from the same document). A changed field breaks the build, not the browser.
+  - **Signals in services, no store library; plain CSS, no UI library.** Two pages and one list do not justify more; either can be added when that stops being true.
+  - **Every failure becomes one `ApiError`** (kind, status, the server's title, request id, retry hint), built from the API's RFC 7807 bodies. A 5xx *without* the API's request id is read as "the API was never reached" (what the dev proxy sends), which keeps "the AI service is down" and "the API is down" apart.
+  - **Writes are one at a time, and the list is re-read after every write, success or not**, because a failed upload still leaves a `Failed` row on the server and the screen must show it. Replacing and deleting ask first. Status is shown as text plus colour.
+- **Evidence:** 68 web tests and 85 .NET tests. Five deliberate breakages in the web code (no refresh after a failed write, no one-write guard, no proxy-error detection, a browser limit that differs from the server's, replace without asking) were each caught by a specific test, and one more for the header badge. A live run in a real browser against the real API and AI service (local embeddings; no model calls, since this page never asks questions): upload, replace after confirmation, rejected file name, an upload while the AI service was stopped (error with retry hint and request id, a `Failed` row, the header badge turning to "AI service unavailable"), re-index after restarting it, delete after confirmation. Contrast is at least 5.9:1 in light and 6.5:1 in dark mode, no horizontal page scroll at phone width, and the production bundle is 279 kB (78 kB transferred).
+- **Found while building it:**
+  1. **The OpenAPI document described the API wrongly.** Every route listed only `200`; deletes said 200 instead of 204/400/404; no error shape was documented; health returned anonymous objects. Types generated from that would have misled the client. The controllers now declare every real response, and the snapshot test keeps them honest.
+  2. **A class-level `[Produces("application/json")]`, added to tidy that document, silently changed error responses from `application/problem+json` to `application/json`.** Existing tests caught it; the media type is now declared per response instead.
+  3. **ASP.NET's default JSON settings accept `"4"` for a number**, so the generated TypeScript typed every integer as `number | string`. Numbers are now strict (a string is a 400), and the document status is an enum, so the page's status handling is a three-value union.
+  4. **The header badge said "Ready: 0 documents" for up to 30 seconds after an upload.** It now re-checks after every document write; a test fails without that.
+  5. `npm audit` reports 16 moderate advisories (glob, minimatch denial of service) inside the Angular CLI's own build tooling; runtime dependencies have none. The suggested fix downgrades the CLI to version 17, so it is not applied. Revisit when the CLI updates.
+- **Limits:**
+  - The 5xx-without-a-request-id rule is a heuristic: a production gateway that adds its own request id would defeat it.
+  - The browser rules, the .NET rules and the Python rules are three copies of one set of limits; the first is now tested against the second, the second against the third only by a contract mismatch showing up as a 502.
+  - No chat page yet, no end-to-end browser tests, one file at a time (no multi-file upload), no authentication.
+  - Cold start: the first upload after the AI service starts took 7 s while the embedding model loaded; the page shows "Uploading..." but gives no progress.

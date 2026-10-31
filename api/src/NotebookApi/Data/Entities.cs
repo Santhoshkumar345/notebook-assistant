@@ -1,9 +1,12 @@
+using System.Text.Json.Serialization;
+
 namespace NotebookApi.Data;
 
 /// <summary>
 /// Pending: being sent to the AI service. Indexed: the AI service confirmed it. Failed: the last attempt did not
 /// succeed, so the search index may be missing this document or still hold an older version of it.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DocumentStatus>))] // the API sends the name, and the OpenAPI document lists the three values
 public enum DocumentStatus { Pending, Indexed, Failed }
 
 public enum MessageRole { User, Assistant }

@@ -83,6 +83,16 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Numbers_sent_as_strings_are_rejected_not_silently_converted()
+    {
+        // Strict number handling keeps the OpenAPI document (and the TypeScript generated from it) to plain numbers.
+        var response = await _client.PostAsync("/api/ask", new StringContent("""{"question":"a fine question","k":"4"}""", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(Upstream.Calls);
+    }
+
+    [Fact]
     public async Task Ask_rejects_an_over_long_question()
     {
         var response = await _client.PostAsJsonAsync("/api/ask", new { question = new string('x', Limits.MaxQuestionChars + 1) });

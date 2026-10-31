@@ -5,13 +5,13 @@ with citations to the exact passages - and abstention when the documents don't c
 
 > Status: **early build.** Ingestion, retrieval, grounded generation with verified citations, hybrid retrieval,
 > evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API (validation,
-> error mapping, document and chat-history persistence) exist. The Angular UI and authentication do not yet.
-> This README only claims what is built.
+> error mapping, document and chat-history persistence) and the Angular shell with its documents page exist. The chat
+> page and authentication do not yet. This README only claims what is built.
 
 ## Planned architecture
 
 ```
-Angular UI
+Angular UI          built: documents page (upload, status, re-index, delete, sync); chat page planned
    |
 ASP.NET Core API    built: validation, errors, correlation id, documents + chat history in SQLite; users, streaming planned
    |
@@ -40,6 +40,7 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
 | Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
 | ASP.NET Core API: validation, typed client, ProblemDetails error mapping, correlation id, SQLite persistence (documents, conversations), index sync; 83 tests | `api/` | built; no auth yet |
+| Angular app: app shell with a live health indicator, documents page, typed client generated from the API's OpenAPI document; 68 tests | `web/` | built; no chat page or auth yet |
 | Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run
@@ -86,6 +87,19 @@ The API listens on `http://127.0.0.1:5247` and forwards to `AiService:BaseUrl` (
 Documents and history live in a SQLite file (`Database:Path`, default `api/src/NotebookApi/App_Data/notebook.db`, created and migrated on first start, not committed).
 The database is the source of truth; the AI service's index is derived from it, and `POST /api/documents/sync` makes the index match.
 Send `X-Request-ID` to trace one request through both services' logs. OpenAPI is served at `/openapi/v1.json` in Development.
+
+## Run the web app
+
+With the AI service and the .NET API running (above):
+
+```bash
+cd web
+npm install
+npm start
+```
+
+Open `http://localhost:4200`. The dev server proxies `/api` to the .NET API. See [web/README.md](web/README.md) for tests,
+how the API types are generated, and how they are kept in step with the API.
 
 **Known gaps:** no authentication, no per-user isolation (any caller can read or delete any document),
 no streaming. Do not expose this service beyond localhost until those exist.
