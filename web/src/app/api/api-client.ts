@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 
 import { ApiError } from './api-error';
-import type { DocumentIn, DocumentInfo, Health, HealthOut, SyncResult } from './models';
+import type { AskRequest, AskResponse, ConversationOut, ConversationSummary, DocumentIn, DocumentInfo, Health, HealthOut, SyncResult } from './models';
 
 /** Typed calls to the .NET API. Paths are relative: in development the dev server proxies /api to the API (proxy.conf.json). */
 @Injectable({ providedIn: 'root' })
@@ -43,5 +43,22 @@ export class ApiClient {
 
   sync(): Observable<SyncResult> {
     return this.http.post<SyncResult>('/api/documents/sync', null);
+  }
+
+  /** Can take 5 to 45 seconds on the free model tier. Unsubscribing cancels the request, and the API does not save an exchange it did not finish. */
+  ask(request: AskRequest): Observable<AskResponse> {
+    return this.http.post<AskResponse>('/api/ask', request);
+  }
+
+  conversations(): Observable<ConversationSummary[]> {
+    return this.http.get<ConversationSummary[]>('/api/conversations');
+  }
+
+  conversation(id: string): Observable<ConversationOut> {
+    return this.http.get<ConversationOut>(`/api/conversations/${encodeURIComponent(id)}`);
+  }
+
+  deleteConversation(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/conversations/${encodeURIComponent(id)}`);
   }
 }

@@ -9,7 +9,12 @@ namespace NotebookApi.Data;
 [JsonConverter(typeof(JsonStringEnumConverter<DocumentStatus>))] // the API sends the name, and the OpenAPI document lists the three values
 public enum DocumentStatus { Pending, Indexed, Failed }
 
-public enum MessageRole { User, Assistant }
+[JsonConverter(typeof(JsonStringEnumConverter<MessageRole>))]
+public enum MessageRole
+{
+    [JsonStringEnumMemberName("user")] User,
+    [JsonStringEnumMemberName("assistant")] Assistant,
+}
 
 /// <summary>
 /// The source of truth for an uploaded document. The AI service's vector index is derived from this and can be rebuilt

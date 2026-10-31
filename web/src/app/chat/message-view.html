@@ -1,0 +1,50 @@
+@let m = message();
+@if (m.role === 'user') {
+  <article class="turn user" aria-label="You asked">
+    <p class="who">You</p>
+    <p class="text">{{ m.text }}</p>
+  </article>
+} @else {
+  <article class="turn assistant" [class]="'turn assistant ' + (m.status ?? '')" [attr.aria-label]="label(m.status)">
+    <p class="who">Assistant<span class="tag"> · {{ label(m.status) }}</span></p>
+    @switch (m.status) {
+      @case ('answered') {
+        <p class="text">{{ m.text }}</p>
+        @if (m.sources.length > 0) {
+          <section class="sources" aria-label="Sources">
+            <h3>Sources</h3>
+            <ol>
+              @for (source of m.sources; track source.id) {
+                <li>
+                  <details>
+                    <summary>
+                      <strong>{{ source.source }}</strong>
+                      @if (source.heading) {
+                        <span class="muted"> · {{ source.heading }}</span>
+                      }
+                    </summary>
+                    <blockquote>{{ source.snippet }}</blockquote>
+                  </details>
+                </li>
+              }
+            </ol>
+          </section>
+        }
+      }
+      @case ('not_found') {
+        <p class="headline">The documents do not contain an answer to this.</p>
+        <p class="muted">Try asking in different words, or upload a document that covers it.</p>
+      }
+      @case ('uncited') {
+        <p class="headline">An answer was drafted, but it could not be backed by a source, so it is not shown.</p>
+        <p class="muted">Try asking in different words, or ask about something narrower.</p>
+      }
+      @case ('clarify') {
+        <p class="text">{{ m.text }}</p>
+      }
+      @default {
+        <p class="text">{{ m.text }}</p>
+      }
+    }
+  </article>
+}

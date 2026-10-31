@@ -45,7 +45,7 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock)
             ConversationId = conversation.Id,
             Role = MessageRole.Assistant,
             Text = answer.Answer,
-            Status = answer.Status,
+            Status = AnswerStatusWire.ToWire(answer.Status),
             Action = answer.Action,
             SourcesJson = JsonSerializer.Serialize(answer.Sources, Json),
             RequestId = requestId,
@@ -64,6 +64,33 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock)
         }
 
         return new AskResponse(conversation.Id, replied.Id, answer.Status, answer.Answer, answer.Sources, answer.Action, answer.Trace);
+    }
+
+    /// <summary>
+    /// The question to send when the person answers a clarifying question: the question that started the exchange, any earlier
+    /// answers, and this one, joined by spaces. This is exactly the form measured in ai-service/evals/clarify_followup_eval.py; a labelled
+    /// form ("Clarification: ...") was not tried, and the label's words could themselves match documents.
+    /// </summary>
+    public async Task<Clarification> ComposeClarifiedQuestionAsync(Guid conversationId, string answer, CancellationToken ct)
+    {
+        var turns = await db.Messages.AsNoTracking()
+            .Where(m => m.ConversationId == conversationId).OrderBy(m => m.Id)
+            .Select(m => new { m.Role, m.Text, m.Status })
+            .ToListAsync(ct);
+        if (turns.Count == 0)
+            return new Clarification(ClarificationOutcome.NoSuchConversation, null); // a conversation only exists once it has an exchange
+
+        const string clarify = "clarify";
+        if (turns[^1] is not { Role: MessageRole.Assistant, Status: clarify })
+            return new Clarification(ClarificationOutcome.NotAwaitingAnswer, null);
+
+        // The exchange began after the last assistant turn that was not itself a clarifying question.
+        var lastSettled = turns.FindLastIndex(t => t.Role == MessageRole.Assistant && t.Status != clarify);
+        var question = string.Join(' ', turns.Skip(lastSettled + 1).Where(t => t.Role == MessageRole.User).Select(t => t.Text).Append(answer));
+
+        return question.Length > Limits.MaxQuestionChars
+            ? new Clarification(ClarificationOutcome.TooLong, null)
+            : new Clarification(ClarificationOutcome.Composed, question);
     }
 
     public async Task<IReadOnlyList<ConversationSummary>> ListAsync(int limit, CancellationToken ct) =>
@@ -92,6 +119,10 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock)
     }
 
     private static MessageOut ToOut(ChatMessage m) =>
-        new(m.Id, m.Role.ToString().ToLowerInvariant(), m.Text, m.Status, m.Action,
+        new(m.Id, m.Role, m.Text, AnswerStatusWire.Parse(m.Status), m.Action,
             m.SourcesJson is null ? [] : JsonSerializer.Deserialize<List<SourceOut>>(m.SourcesJson, Json) ?? [], m.CreatedAt);
 }
+
+public enum ClarificationOutcome { Composed, NoSuchConversation, NotAwaitingAnswer, TooLong }
+
+public readonly record struct Clarification(ClarificationOutcome Outcome, string? Question);

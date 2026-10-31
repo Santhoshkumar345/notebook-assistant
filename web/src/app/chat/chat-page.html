@@ -1,0 +1,76 @@
+<div class="chat">
+  <aside class="sidebar" [class.open]="listOpen()" id="conversation-panel">
+    <app-conversation-list />
+  </aside>
+
+  <section class="pane" aria-labelledby="chat-heading">
+    <div class="pane-head">
+      <h1 id="chat-heading">{{ store.thread()?.title ?? 'New conversation' }}</h1>
+      <button type="button" class="button small toggle-list" (click)="listOpen.set(!listOpen())" [attr.aria-expanded]="listOpen()" aria-controls="conversation-panel">
+        Conversations
+      </button>
+    </div>
+
+    @if (nothingSearchable()) {
+      <p class="banner warn">
+        No document is searchable yet, so every question will come back as not found.
+        <a routerLink="/documents">Add a document</a>
+      </p>
+    }
+
+    <div class="thread" #thread role="log" aria-label="Conversation" aria-live="polite">
+      @if (store.threadError(); as error) {
+        <div class="banner error" role="alert">
+          <strong>{{ describeError(error) }}</strong>
+          @if (error.requestId) {
+            <span class="muted">Request id <code>{{ error.requestId }}</code></span>
+          }
+          <a routerLink="/chat">Start a new conversation</a>
+        </div>
+      } @else if (store.threadLoading() && store.messages().length === 0) {
+        <p class="muted">Loading conversation…</p>
+      } @else if (store.messages().length === 0 && store.sending() === null && store.sendError() === null) {
+        <div class="welcome">
+          <h2>Ask your documents</h2>
+          <p class="muted">
+            Answers come with the passages they are based on. If the documents do not contain the answer, you are told so instead of getting a guess.
+          </p>
+        </div>
+      }
+
+      @for (message of store.messages(); track message.id) {
+        <app-message-view [message]="message" />
+      }
+
+      @if (store.sending(); as pending) {
+        <article class="pending" aria-label="Your question, waiting for an answer">
+          <p class="who">You</p>
+          <p class="text">{{ pending.text }}</p>
+        </article>
+        <app-thinking-indicator [since]="pending.since" (stop)="store.stop()" />
+      }
+
+      @if (store.sendError(); as error) {
+        <div class="banner error" role="alert">
+          <span>
+            <strong>{{ describeError(error) }}</strong>
+            @if (store.failedQuestion(); as question) {
+              <span class="block">Not answered: <q>{{ question }}</q></span>
+            }
+            @if (error.requestId) {
+              <span class="block muted">Request id <code>{{ error.requestId }}</code></span>
+            }
+          </span>
+          <span class="actions">
+            @if (store.canRetry()) {
+              <button type="button" class="button small" (click)="submitRetry()">Retry</button>
+            }
+            <button type="button" class="button small" (click)="store.dismissSendError()">Dismiss</button>
+          </span>
+        </div>
+      }
+    </div>
+
+    <app-composer (submitted)="submit()" />
+  </section>
+</div>

@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+.turn {
+  max-width: 46rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.turn.user {
+  margin-left: auto;
+  background: var(--info-bg);
+  border-color: transparent;
+  color: var(--info-fg);
+}
+
+.turn.not_found,
+.turn.uncited {
+  background: var(--warn-bg);
+  border-color: transparent;
+  color: var(--warn-fg);
+}
+
+.turn.clarify {
+  border-color: var(--accent);
+}
+
+.who {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.tag {
+  font-weight: 400;
+}
+
+.text,
+.headline {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.headline {
+  font-weight: 600;
+}
+
+/* Secondary text keeps the card's full contrast (a fade would drop it to 4.9:1 in light mode); size carries the hierarchy. */
+.turn p.muted {
+  margin: 0.25rem 0 0;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.sources {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.sources h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sources ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+blockquote {
+  margin: 0.4rem 0 0.4rem 0.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  color: var(--muted);
+}

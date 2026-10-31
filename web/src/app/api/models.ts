@@ -11,6 +11,19 @@ export type DocumentStatus = Schemas['DocumentStatus'];
 export type SyncResult = Schemas['SyncResult'];
 export type HealthOut = Schemas['HealthOut'];
 
+export type AnswerStatus = Schemas['AnswerStatus'];
+export type AskResponse = Schemas['AskResponse'];
+export type SourceOut = Schemas['SourceOut'];
+export type MessageOut = Schemas['MessageOut'];
+export type ConversationSummary = Schemas['ConversationSummary'];
+export type ConversationOut = Schemas['ConversationOut'];
+
+/** standard: always search, then answer. agent: may also ask a clarifying question or summarize a whole document (slower, more model calls). */
+export type AskMode = 'pipeline' | 'agent';
+
+/** The request body, with the mode narrowed from the schema's plain string to the two values the API accepts. */
+export type AskRequest = Omit<Schemas['AskIn'], 'mode'> & { mode: AskMode };
+
 /** What the app knows about the system: the API and, behind it, the AI service. */
 export type Health =
   | { state: 'checking' }

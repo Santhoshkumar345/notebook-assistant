@@ -2,7 +2,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { ApiClient } from '../api/api-client';
-import { ApiError } from '../api/api-error';
+import type { ApiError } from '../api/api-error';
+import { asApiError } from '../api/api-error';
 import type { DocumentInfo } from '../api/models';
 
 /**
@@ -103,10 +104,6 @@ export class DocumentsStore {
       this.writeCount.update((n) => n + 1);
     }
   }
-}
-
-function asApiError(error: unknown): ApiError {
-  return error instanceof ApiError ? error : new ApiError('unknown', 0, error instanceof Error ? error.message : 'Something went wrong.', null, null, []);
 }
 
 function plural(count: number, one: string, many = `${one}s`): string {

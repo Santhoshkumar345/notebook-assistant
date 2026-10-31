@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { errorInterceptor } from '../api/api-error';
+import { ChatStore } from '../chat/chat-store';
 import { DocumentsStore } from '../documents/documents-store';
 import { HEALTH_POLL_MS, HealthBadge } from './health-badge';
 
@@ -11,16 +12,19 @@ describe('HealthBadge', () => {
   let fixture: ComponentFixture<HealthBadge>;
   let http: HttpTestingController;
   const writes = signal(0); // stands in for DocumentsStore.writes
+  const asks = signal(0); // stands in for ChatStore.asks
   const label = () => (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ').trim();
 
   beforeEach(() => {
     vi.useFakeTimers();
     writes.set(0);
+    asks.set(0);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([errorInterceptor])),
         provideHttpClientTesting(),
         { provide: DocumentsStore, useValue: { writes } },
+        { provide: ChatStore, useValue: { asks } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -89,5 +93,17 @@ describe('HealthBadge', () => {
     fixture.detectChanges();
 
     expect(label()).toBe('Ready: 1 document searchable');
+  });
+
+  it('checks again straight away when a question finishes, so a failed one shows the AI service as unavailable', () => {
+    answer({ status: 'ok', ai: { status: 'ok', documents: 2, chunks: 9 } });
+    expect(label()).toBe('Ready: 2 documents searchable');
+
+    asks.set(1);
+    fixture.detectChanges();
+    http.expectOne('/api/health').flush({ status: 'degraded', ai: null }, { status: 503, statusText: 'x', headers: { 'X-Request-ID': 'r1' } });
+    fixture.detectChanges();
+
+    expect(label()).toBe('AI service unavailable');
   });
 });

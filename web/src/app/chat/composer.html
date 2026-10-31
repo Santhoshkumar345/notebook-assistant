@@ -1,0 +1,46 @@
+<form class="composer" (submit)="$event.preventDefault(); submit()">
+  @if (store.pendingClarification(); as clarification) {
+    @if (store.answering()) {
+      <div class="banner warn answering">
+        <span>Answering: <q>{{ clarification.text }}</q></span>
+        <button type="button" class="link" (click)="store.setAskingSomethingElse(true)">Ask something else instead</button>
+      </div>
+    } @else {
+      <div class="banner info answering">
+        <span>This will be asked as a new question.</span>
+        <button type="button" class="link" (click)="store.setAskingSomethingElse(false)">Answer the question above instead</button>
+      </div>
+    }
+  }
+
+  <label class="sr-only" for="question">{{ store.answering() ? 'Your answer' : 'Your question' }}</label>
+  <textarea
+    id="question"
+    rows="2"
+    [value]="store.draft()"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    [attr.placeholder]="store.answering() ? 'Type your answer' : 'Ask a question about your documents'"
+    [attr.aria-invalid]="tooLong() ? 'true' : null"
+    aria-describedby="question-help"
+    [disabled]="store.sending() !== null"
+  ></textarea>
+
+  <div class="row">
+    <fieldset class="mode" [disabled]="store.sending() !== null">
+      <legend>Mode</legend>
+      <label><input type="radio" name="mode" value="pipeline" [checked]="store.mode() === 'pipeline'" (change)="setMode('pipeline')" /> Standard</label>
+      <label><input type="radio" name="mode" value="agent" [checked]="store.mode() === 'agent'" (change)="setMode('agent')" /> Agent</label>
+    </fieldset>
+    <span class="count" [class.over]="tooLong()">{{ length() }} / {{ max }}</span>
+    <button type="submit" class="button primary" [disabled]="!canSend()">{{ store.answering() ? 'Send answer' : 'Ask' }}</button>
+  </div>
+
+  <p id="question-help" class="muted help">
+    @if (tooLong(); as problem) {
+      {{ problem }}
+    } @else {
+      {{ modeHelp() }} Enter sends, Shift+Enter adds a line.
+    }
+  </p>
+</form>

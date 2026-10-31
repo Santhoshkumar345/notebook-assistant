@@ -1,0 +1,100 @@
+.chat {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pane-head h1 {
+  margin: 0 0 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle-list {
+  display: none;
+  margin-bottom: 0.75rem;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 16rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.welcome {
+  margin: auto;
+  max-width: 28rem;
+  text-align: center;
+}
+
+.welcome h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.pending {
+  align-self: flex-end;
+  max-width: 46rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--info-bg);
+  color: var(--info-fg);
+  opacity: 0.8;
+}
+
+.pending p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pending .who {
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.block {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 47.99rem) {
+  .chat {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    display: none;
+    max-height: none;
+  }
+
+  .sidebar.open {
+    display: block;
+  }
+
+  .toggle-list {
+    display: inline-block;
+  }
+}

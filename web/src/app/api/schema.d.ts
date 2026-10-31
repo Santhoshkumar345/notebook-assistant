@@ -55,6 +55,15 @@ export interface paths {
                         "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
                 /** @description Bad Gateway */
                 502: {
                     headers: {
@@ -585,6 +594,8 @@ export interface components {
             /** Format: int32 */
             chunks: number;
         };
+        /** @enum {unknown} */
+        AnswerStatus: "answered" | "not_found" | "uncited" | "clarify";
         AskIn: {
             question: string;
             /** Format: int32 */
@@ -592,13 +603,14 @@ export interface components {
             mode?: string;
             /** Format: uuid */
             conversationId?: null | string;
+            answersClarification?: boolean;
         };
         AskResponse: {
             /** Format: uuid */
             conversationId: string;
             /** Format: int32 */
             messageId: number;
-            status: string;
+            status: components["schemas"]["AnswerStatus"];
             answer: string;
             sources: components["schemas"]["SourceOut"][];
             action: string;
@@ -651,14 +663,16 @@ export interface components {
         MessageOut: {
             /** Format: int32 */
             id: number;
-            role: string;
+            role: components["schemas"]["MessageRole"];
             text: string;
-            status: null | string;
+            status: null | components["schemas"]["AnswerStatus"];
             action: null | string;
             sources: components["schemas"]["SourceOut"][];
             /** Format: date-time */
             createdAt: string;
         };
+        /** @enum {unknown} */
+        MessageRole: "user" | "assistant";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;

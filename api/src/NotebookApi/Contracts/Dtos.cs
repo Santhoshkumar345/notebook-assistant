@@ -30,12 +30,22 @@ public sealed class AskIn
 
     /// <summary>Continue this conversation. Omitted: a new one is started. Used only to save the exchange; the AI service never sees it.</summary>
     public Guid? ConversationId { get; init; }
+
+    /// <summary>
+    /// True when this question is the person's answer to a clarifying question the conversation is waiting on. The AI service is
+    /// then given the original question together with the answer (and any earlier answers in the same exchange). Requires
+    /// conversationId; 409 if the conversation is not waiting for an answer. What is saved is what the person typed.
+    /// </summary>
+    public bool AnswersClarification { get; init; }
+
+    /// <summary>The same request with a different question text (the combined one), everything else unchanged.</summary>
+    public AskIn WithQuestion(string question) => new() { Question = question, K = K, Mode = Mode, ConversationId = ConversationId, AnswersClarification = AnswersClarification };
 }
 
 public sealed record SourceOut(string Id, string Source, string Heading, string Snippet);
 
 /// <summary>The AI service's reply, as it sends it. For status "clarify" the answer field holds the clarifying question to put to the user.</summary>
-public sealed record AskOut(string Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
+public sealed record AskOut(AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
 
 public sealed record AiHealth(string Status, int Documents, int Chunks);
 
@@ -57,10 +67,10 @@ public sealed record DocumentInfo(string Name, int Chars, int? Chunks, DocumentS
 public sealed record SyncResult(int Reindexed, IReadOnlyList<string> RemovedFromIndex);
 
 /// <summary>The AI service's answer, plus where it was saved.</summary>
-public sealed record AskResponse(Guid ConversationId, int MessageId, string Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
+public sealed record AskResponse(Guid ConversationId, int MessageId, AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
 
 public sealed record ConversationSummary(Guid Id, string Title, int Messages, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
-public sealed record MessageOut(int Id, string Role, string Text, string? Status, string? Action, IReadOnlyList<SourceOut> Sources, DateTimeOffset CreatedAt);
+public sealed record MessageOut(int Id, MessageRole Role, string Text, AnswerStatus? Status, string? Action, IReadOnlyList<SourceOut> Sources, DateTimeOffset CreatedAt);
 
 public sealed record ConversationOut(Guid Id, string Title, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<MessageOut> Messages);

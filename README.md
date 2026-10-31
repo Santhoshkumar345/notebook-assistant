@@ -5,13 +5,13 @@ with citations to the exact passages - and abstention when the documents don't c
 
 > Status: **early build.** Ingestion, retrieval, grounded generation with verified citations, hybrid retrieval,
 > evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API (validation,
-> error mapping, document and chat-history persistence) and the Angular shell with its documents page exist. The chat
-> page and authentication do not yet. This README only claims what is built.
+> error mapping, document and chat-history persistence) and the Angular app with its documents and chat pages exist.
+> Authentication does not yet. This README only claims what is built.
 
 ## Planned architecture
 
 ```
-Angular UI          built: documents page (upload, status, re-index, delete, sync); chat page planned
+Angular UI          built: documents page (upload, status, re-index, delete, sync) and chat page (ask, citations, clarifying questions)
    |
 ASP.NET Core API    built: validation, errors, correlation id, documents + chat history in SQLite; users, streaming planned
    |
@@ -39,8 +39,9 @@ for the design decisions, the evidence behind each, and what that evidence does 
 | FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
 | Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
 | Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
-| ASP.NET Core API: validation, typed client, ProblemDetails error mapping, correlation id, SQLite persistence (documents, conversations), index sync; 83 tests | `api/` | built; no auth yet |
-| Angular app: app shell with a live health indicator, documents page, typed client generated from the API's OpenAPI document; 68 tests | `web/` | built; no chat page or auth yet |
+| ASP.NET Core API: validation, typed client, ProblemDetails error mapping, correlation id, SQLite persistence (documents, conversations), index sync, clarification follow-ups; 100 tests | `api/` | built; no auth yet |
+| Angular app: shell with a live health indicator, documents page, chat page (standard and agent modes, cited sources, clarifying-question flow, stop and retry), typed client generated from the API's OpenAPI document; 150 tests | `web/` | built; no auth yet |
+| Retrieval comparison for answering a clarifying question (reply alone vs question plus reply) | `ai-service/evals/clarify_followup_eval.py` | built; results and caveats in `docs/architecture.md` |
 | Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
 
 ## Run
@@ -83,7 +84,7 @@ dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
 
 The API listens on `http://127.0.0.1:5247` and forwards to `AiService:BaseUrl` (default `http://127.0.0.1:8000`, set in
 `api/src/NotebookApi/appsettings.json`). Routes: `GET /api/health`; `GET|POST /api/documents`, `DELETE /api/documents/{name}`, `POST /api/documents/{name}/reindex`, `POST /api/documents/sync`;
-`POST /api/ask` (optional `conversationId`); `GET /api/conversations`, `GET|DELETE /api/conversations/{id}`.
+`POST /api/ask` (optional `conversationId`, and `answersClarification` when answering a clarifying question); `GET /api/conversations`, `GET|DELETE /api/conversations/{id}`.
 Documents and history live in a SQLite file (`Database:Path`, default `api/src/NotebookApi/App_Data/notebook.db`, created and migrated on first start, not committed).
 The database is the source of truth; the AI service's index is derived from it, and `POST /api/documents/sync` makes the index match.
 Send `X-Request-ID` to trace one request through both services' logs. OpenAPI is served at `/openapi/v1.json` in Development.

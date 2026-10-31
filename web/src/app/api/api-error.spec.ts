@@ -24,6 +24,7 @@ describe('toApiError', () => {
   it('maps the API statuses to kinds', () => {
     const withId = { 'X-Request-ID': 'r1' };
     expect(toApiError(failure(404, { title: 'No such document.' }, withId)).kind).toBe('not-found');
+    expect(toApiError(failure(409, { title: 'Not waiting.' }, withId)).kind).toBe('conflict');
     expect(toApiError(failure(502, null, withId)).kind).toBe('upstream');
     expect(toApiError(failure(503, null, withId)).kind).toBe('busy');
     expect(toApiError(failure(504, null, withId)).kind).toBe('timeout');
@@ -62,6 +63,10 @@ describe('describeError', () => {
   it('shows validation messages, falling back to the title', () => {
     expect(describeError(make('validation', { fields: ['A.', 'B.'] }))).toBe('A. B.');
     expect(describeError(make('validation'))).toBe('Server title');
+  });
+
+  it('tells the person to ask again when a conversation is not waiting for their answer', () => {
+    expect(describeError(make('conflict'))).toContain('Ask your question again');
   });
 
   it('tells the person to check the list after a timeout, since the work may have finished', () => {

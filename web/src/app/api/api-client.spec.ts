@@ -90,4 +90,28 @@ describe('ApiClient', () => {
       expect(await result).toEqual({ reindexed: 2, removedFromIndex: ['x.md'] });
     });
   });
+
+  describe('chat', () => {
+    it('asks with the mode, the conversation and whether this answers a clarifying question', async () => {
+      const result = firstValueFrom(client.ask({ question: 'relative dates', mode: 'agent', conversationId: 'c-1', answersClarification: true }));
+      const request = http.expectOne({ method: 'POST', url: '/api/ask' });
+      expect(request.request.body).toEqual({ question: 'relative dates', mode: 'agent', conversationId: 'c-1', answersClarification: true });
+      request.flush({ conversationId: 'c-1', messageId: 4, status: 'answered', answer: 'x', sources: [], action: 'retrieve', trace: [] });
+      expect((await result).status).toBe('answered');
+    });
+
+    it('lists, reads and deletes conversations, encoding the id', async () => {
+      const list = firstValueFrom(client.conversations());
+      http.expectOne({ method: 'GET', url: '/api/conversations' }).flush([]);
+      await list;
+
+      const one = firstValueFrom(client.conversation('a b'));
+      http.expectOne({ method: 'GET', url: '/api/conversations/a%20b' }).flush({ id: 'a b', title: 't', createdAt: '', updatedAt: '', messages: [] });
+      await one;
+
+      const removal = firstValueFrom(client.deleteConversation('a b'));
+      http.expectOne({ method: 'DELETE', url: '/api/conversations/a%20b' }).flush(null, { status: 204, statusText: 'No Content' });
+      await removal;
+    });
+  });
 });

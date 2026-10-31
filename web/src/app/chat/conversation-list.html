@@ -1,0 +1,40 @@
+<nav aria-label="Conversations">
+  <a class="button primary new" routerLink="/chat">New conversation</a>
+
+  @if (store.listError(); as error) {
+    <p class="banner error" role="alert">
+      Could not load conversations. {{ describeError(error) }}
+      <button type="button" class="link" (click)="store.loadList()">Retry</button>
+    </p>
+  }
+
+  @if (store.deleteError(); as error) {
+    <p class="banner error" role="alert">{{ describeError(error) }}</p>
+  }
+
+  @if (store.listLoaded() && store.conversations().length === 0 && !store.listError()) {
+    <p class="muted empty">No conversations yet.</p>
+  }
+
+  <ul>
+    @for (conversation of store.conversations(); track conversation.id) {
+      <li [class.active]="conversation.id === store.activeId()">
+        @if (confirmingId() === conversation.id) {
+          <div class="confirm" role="alertdialog" aria-label="Delete this conversation?">
+            <span>Delete this conversation?</span>
+            <span class="actions">
+              <button type="button" class="button small danger" (click)="confirmDelete(conversation.id)">Delete</button>
+              <button type="button" class="button small" (click)="confirmingId.set(null)">Cancel</button>
+            </span>
+          </div>
+        } @else {
+          <a [routerLink]="['/chat', conversation.id]" [attr.aria-current]="conversation.id === store.activeId() ? 'page' : null">
+            <span class="title">{{ conversation.title }}</span>
+            <span class="meta muted">{{ conversation.messages }} messages · {{ conversation.updatedAt | date: 'MMM d, h:mm a' }}</span>
+          </a>
+          <button type="button" class="remove" (click)="confirmingId.set(conversation.id)" [attr.aria-label]="'Delete conversation: ' + conversation.title">×</button>
+        }
+      </li>
+    }
+  </ul>
+</nav>

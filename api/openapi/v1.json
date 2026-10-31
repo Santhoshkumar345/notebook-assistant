@@ -66,6 +66,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "502": {
             "description": "Bad Gateway",
             "content": {
@@ -565,6 +575,14 @@
           }
         }
       },
+      "AnswerStatus": {
+        "enum": [
+          "answered",
+          "not_found",
+          "uncited",
+          "clarify"
+        ]
+      },
       "AskIn": {
         "required": [
           "question"
@@ -592,6 +610,9 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "answersClarification": {
+            "type": "boolean"
           }
         }
       },
@@ -616,7 +637,7 @@
             "format": "int32"
           },
           "status": {
-            "type": "string"
+            "$ref": "#/components/schemas/AnswerStatus"
           },
           "answer": {
             "type": "string"
@@ -811,15 +832,19 @@
             "format": "int32"
           },
           "role": {
-            "type": "string"
+            "$ref": "#/components/schemas/MessageRole"
           },
           "text": {
             "type": "string"
           },
           "status": {
-            "type": [
-              "null",
-              "string"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnswerStatus"
+              }
             ]
           },
           "action": {
@@ -839,6 +864,12 @@
             "format": "date-time"
           }
         }
+      },
+      "MessageRole": {
+        "enum": [
+          "user",
+          "assistant"
+        ]
       },
       "ProblemDetails": {
         "type": "object",

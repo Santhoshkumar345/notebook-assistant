@@ -1,0 +1,84 @@
+.composer {
+  margin-top: 0.75rem;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+textarea:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.mode {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 auto 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.mode legend {
+  float: left;
+  margin-right: 0.75rem;
+  padding: 0;
+  color: var(--muted);
+}
+
+/* The whole label is the touch target (at least 24 px each way), not just the 13 px radio. */
+.mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  cursor: pointer;
+}
+
+.mode input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+}
+
+.count {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.count.over {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.help {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+}
+
+.answering {
+  margin-bottom: 0.5rem;
+  justify-content: space-between;
+}

@@ -5,6 +5,7 @@ export type ApiErrorKind =
   | 'network' // nothing from the API answered (it is down, or the dev proxy could not reach it)
   | 'validation' // 400: the request broke a rule
   | 'not-found' // 404
+  | 'conflict' // 409: the request does not fit the current state (for example, nothing is waiting for that answer)
   | 'busy' // 503: the AI service is busy or unreachable
   | 'timeout' // 504: the AI service took too long
   | 'upstream' // 502: the AI service answered with something unusable
@@ -58,6 +59,8 @@ export function toApiError(response: HttpErrorResponse): ApiError {
       return make('validation', 'The request was not accepted.');
     case 404:
       return make('not-found', 'Not found.');
+    case 409:
+      return make('conflict', 'The request does not fit the current state.');
     case 502:
       return make('upstream', 'The AI service returned something unusable.');
     case 503:
@@ -67,6 +70,11 @@ export function toApiError(response: HttpErrorResponse): ApiError {
     default:
       return make('unknown', `Unexpected error (HTTP ${response.status}).`);
   }
+}
+
+/** Anything thrown, as an ApiError, so a screen can show it the same way. */
+export function asApiError(error: unknown): ApiError {
+  return error instanceof ApiError ? error : new ApiError('unknown', 0, error instanceof Error ? error.message : 'Something went wrong.', null, null, []);
 }
 
 /** Turns every failed HTTP call into an <see cref="ApiError"/>, so no screen has to understand HttpErrorResponse. */
@@ -84,6 +92,8 @@ export function describeError(error: ApiError): string {
       return error.fieldErrors.length > 0 ? error.fieldErrors.join(' ') : error.message;
     case 'not-found':
       return 'That item no longer exists. The list has been refreshed.';
+    case 'conflict':
+      return 'The conversation is no longer waiting for that answer. Ask your question again.';
     case 'busy': {
       const wait = error.retryAfterSeconds === null ? '' : ` Try again in about ${error.retryAfterSeconds} seconds.`;
       return `The AI service is busy or not reachable.${wait}`;

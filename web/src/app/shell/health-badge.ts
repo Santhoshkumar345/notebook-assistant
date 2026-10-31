@@ -4,6 +4,7 @@ import { merge, skip, switchMap, timer } from 'rxjs';
 
 import { ApiClient } from '../api/api-client';
 import type { Health } from '../api/models';
+import { ChatStore } from '../chat/chat-store';
 import { DocumentsStore } from '../documents/documents-store';
 
 export const HEALTH_POLL_MS = 30_000;
@@ -45,13 +46,16 @@ export const HEALTH_POLL_MS = 30_000;
 export class HealthBadge {
   private readonly api = inject(ApiClient);
   private readonly documents = inject(DocumentsStore);
+  private readonly chat = inject(ChatStore);
 
   protected readonly health = signal<Health>({ state: 'checking' });
 
   constructor() {
-    // Every 30 seconds, and straight away after a document is added, replaced, re-indexed, deleted or synced.
+    // Every 30 seconds, and straight away after a document changes or a question finishes: a failed question is the moment
+    // the AI service most likely just went away.
     const afterWrite = toObservable(this.documents.writes).pipe(skip(1));
-    merge(timer(0, HEALTH_POLL_MS), afterWrite)
+    const afterAsk = toObservable(this.chat.asks).pipe(skip(1));
+    merge(timer(0, HEALTH_POLL_MS), afterWrite, afterAsk)
       .pipe(
         switchMap(() => this.api.health()),
         takeUntilDestroyed(),
