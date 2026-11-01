@@ -12,6 +12,7 @@ Who may call, and whose data it is:
 """
 
 import contextvars
+import hashlib
 import hmac
 import logging
 import os
@@ -27,6 +28,7 @@ from fastapi.responses import JSONResponse, Response
 from google.genai import errors as genai_errors
 from pydantic import BaseModel, Field
 
+from app import tracing
 from app.generation import Status
 from app.service import Service
 from app.tenants import InvalidTenant, Tenants, default_tenants
@@ -77,6 +79,11 @@ class AskOut(BaseModel):
 # traced across both services. An incoming value is accepted only if it is short and plain (so it cannot inject into logs).
 REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
+def fingerprint(tenant: str) -> str:
+    """A short, stable stand-in for a tenant id: enough to see that two requests came from the same person, not enough to name them."""
+    return hashlib.sha256(tenant.encode()).hexdigest()[:8]
 
 
 def configure_logging() -> None:
@@ -156,6 +163,19 @@ def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR,
         response.headers["X-Request-ID"] = request_id
         return response
 
+    @app.middleware("http")
+    async def trace_middleware(request: Request, call_next):
+        # Added last, so it is the outermost: a request refused for a bad key or an oversized body is traced as well.
+        # The path is not recorded (it can hold a document's name); the route template is, once routing has chosen one.
+        tenant = request.headers.get("x-tenant-id", "")
+        with tracing.span("http.request", **{"http.method": request.method, "tenant.fingerprint": fingerprint(tenant) if tenant else None}) as current:
+            response = await call_next(request)
+            route = request.scope.get("route")
+            tracing.annotate(
+                current, request_id=response.headers.get("x-request-id"), **{"http.route": getattr(route, "path", "unmatched"), "http.status_code": response.status_code}
+            )
+            return response
+
     @app.exception_handler(genai_errors.APIError)
     async def upstream_error(request: Request, exc: genai_errors.APIError):
         if exc.code in (429, 503):
@@ -204,4 +224,5 @@ def app_from_env() -> FastAPI:
     keeps its index in AI_DATA_DIR if set (the end-to-end screenshot run points it at a throwaway directory), else in ai-service/data/chroma.
     A factory, not a module-level `app`, so importing this module never needs a secret and never starts anything."""
     load_dotenv(FsPath(__file__).resolve().parent.parent / ".env")  # a variable already in the environment wins over the file
+    tracing.configure_from_env()  # off unless NOTEBOOK_TRACE_FILE or OTEL_EXPORTER_OTLP_ENDPOINT is set
     return create_app(data_dir=os.environ.get("AI_DATA_DIR") or DEFAULT_DATA_DIR)

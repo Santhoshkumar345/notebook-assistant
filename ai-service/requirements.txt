@@ -10,3 +10,7 @@ numpy==2.5.4
 pytest==9.1.1
 rank-bm25==0.2.2
 langgraph==1.2.17
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+# only imported when OTEL_EXPORTER_OTLP_ENDPOINT is set (it brings gRPC with it):
+opentelemetry-exporter-otlp-proto-grpc==1.45.1

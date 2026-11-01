@@ -24,7 +24,8 @@ from google.genai import types
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
-from app.generation import RagResult, Status, answer_question, escape_untrusted
+from app import tracing
+from app.generation import RagResult, Status, answer_question, escape_untrusted, guarded
 from app.llm import call_model
 from app.store import Hit, VectorStore
 
@@ -81,6 +82,12 @@ class State(TypedDict):
 
 def build_agent(deps: AgentDeps, k: int = 4, max_rewrites: int = MAX_REWRITES, max_context: int = MAX_CONTEXT) -> Callable[[str], AgentResult]:
     def route_node(state: State) -> dict:
+        with tracing.span("agent.route") as current:
+            update = decide_route(state)
+            tracing.annotate(current, **{"rag.action": update["action"]})
+            return update
+
+    def decide_route(state: State) -> dict:
         documents = deps.documents()
         route = deps.route(state["question"], documents)
         if route is None:
@@ -96,23 +103,30 @@ def build_agent(deps: AgentDeps, k: int = 4, max_rewrites: int = MAX_REWRITES, m
         return {"action": "retrieve", "model_calls": 1, "trace": ["route: retrieve"]}
 
     def retrieve_node(state: State) -> dict:
-        new = deps.retrieve(state["query"], k)
-        seen = {h.id for h in state["hits"]}
-        merged = (state["hits"] + [h for h in new if h.id not in seen])[:max_context]
-        return {"hits": merged, "trace": [f"retrieved {len(new)} chunks ({len(merged)} in context)"]}
+        with tracing.span("agent.retrieve") as current:
+            new = deps.retrieve(state["query"], k)
+            seen = {h.id for h in state["hits"]}
+            merged = (state["hits"] + [h for h in new if h.id not in seen])[:max_context]
+            tracing.annotate(current, **{"retrieve.returned": len(new), "retrieve.in_context": len(merged), "agent.rewrites": state["rewrites"]})
+            return {"hits": merged, "trace": [f"retrieved {len(new)} chunks ({len(merged)} in context)"]}
 
     def answer_node(state: State) -> dict:
-        result = deps.answer(state["question"], state["hits"])
-        return {"result": result, "model_calls": 1 if state["hits"] else 0, "trace": [f"answer: {result.status.value}"]}
+        with tracing.span("agent.answer") as current:
+            result = deps.answer(state["question"], state["hits"])
+            tracing.annotate(current, **{"rag.status": result.status.value, "rag.cited": len(result.sources)})
+            return {"result": result, "model_calls": 1 if state["hits"] else 0, "trace": [f"answer: {result.status.value}"]}
 
     def rewrite_node(state: State) -> dict:
-        query = (deps.rewrite(state["question"]) or "").strip() or state["question"]
-        return {"query": query, "rewrites": state["rewrites"] + 1, "model_calls": 1, "trace": [f"not_found: retrying once with the query {query!r}"]}
+        with tracing.span("agent.rewrite"):
+            query = (deps.rewrite(state["question"]) or "").strip() or state["question"]
+            return {"query": query, "rewrites": state["rewrites"] + 1, "model_calls": 1, "trace": [f"not_found: retrying once with the query {query!r}"]}
 
     def summarize_node(state: State) -> dict:
-        chunks = deps.chunks_of(state["document"])
-        result = deps.summarize(state["document"], chunks)
-        return {"result": result, "model_calls": 1 if chunks else 0, "trace": [f"summarized {len(chunks)} sections of {state['document']}"]}
+        with tracing.span("agent.summarize") as current:
+            chunks = deps.chunks_of(state["document"])
+            result = deps.summarize(state["document"], chunks)
+            tracing.annotate(current, **{"agent.sections": len(chunks), "rag.status": result.status.value})
+            return {"result": result, "model_calls": 1 if chunks else 0, "trace": [f"summarized {len(chunks)} sections of {state['document']}"]}
 
     def after_answer(state: State) -> str:
         retry = state["result"].status is Status.not_found and state["rewrites"] < max_rewrites
@@ -163,12 +177,12 @@ SUMMARY_SYSTEM = (
 def llm_route(question: str, documents: list[str]) -> Route | None:
     config = types.GenerateContentConfig(system_instruction=ROUTER_SYSTEM, temperature=0.0, max_output_tokens=300,
                                          response_mime_type="application/json", response_schema=Route)
-    return call_model(f"Documents: {documents}\nQuestion: {question}", config).parsed
+    return call_model(f"Documents: {documents}\nQuestion: {question}", config, purpose="route").parsed
 
 
 def llm_rewrite(question: str) -> str:
     config = types.GenerateContentConfig(system_instruction=REWRITE_SYSTEM, temperature=0.0, max_output_tokens=100)
-    lines = (call_model(question, config).text or "").strip().splitlines()
+    lines = (call_model(question, config, purpose="rewrite").text or "").strip().splitlines()
     return lines[0].strip() if lines else question  # an empty reply falls back to the original question
 
 
@@ -178,12 +192,12 @@ def llm_summarize(document: str, chunks: list[Hit]) -> RagResult:
     used = chunks[:MAX_SUMMARY_CHUNKS]
     body = "\n\n".join(f"[{i}] ({h.heading})\n{escape_untrusted(h.body)}" for i, h in enumerate(used, 1))
     config = types.GenerateContentConfig(system_instruction=SUMMARY_SYSTEM, temperature=0.0, max_output_tokens=600)
-    resp = call_model(f"<sections>\n{body}\n</sections>\n\nSummarize the document {document!r}.", config)
+    resp = call_model(f"<sections>\n{body}\n</sections>\n\nSummarize the document {document!r}.", config, purpose="summarize")
     text = (resp.text or "").strip()
     if not text:
         return RagResult(Status.error, "", [], "the summarizer returned no text")
     note = f" (covers the first {len(used)} of {len(chunks)} sections)" if len(chunks) > len(used) else ""
-    return RagResult(Status.answered, text + note, used)
+    return guarded(text + note, used)
 
 
 def llm_deps(retrieve: Callable[[str, int], list[Hit]], store: VectorStore, answer: Callable[[str, list[Hit]], RagResult] = answer_question) -> AgentDeps:

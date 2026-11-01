@@ -89,7 +89,7 @@ Open http://localhost:4200, create an account, upload a Markdown file, and ask a
 
 | Layer | Command | Tests | What it covers |
 |---|---|---|---|
-| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 130 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit |
+| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 250 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit, tracing (and that it never records text), the output guard, the evaluation framework |
 | API | `cd api && dotnet test` | 225 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks |
 | Web | `cd web && npm test` | 266 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
 | End to end | `cd e2e && npm install && npm test` | 28 | the real stack in a real browser, two users side by side, failure and retry, and an accessibility scan of every screen in light, dark and phone width |
@@ -99,7 +99,17 @@ The end-to-end tests run on ports of their own and need no Gemini key: the langu
 Most of the security-relevant tests were written test-first and then checked by *breaking the code on purpose* to confirm a test fails; the evidence is recorded per step in
 [docs/architecture.md](docs/architecture.md).
 
-**Evaluations** (how good the answers are, as opposed to whether the code works) need a Gemini key unless run with `--retrieval-only`:
+**Evaluations** (how good the answers are, as opposed to whether the code works) run through one framework with fingerprinted datasets, cached model calls and a baseline that fails on regression
+([docs/observability-and-evals.md](docs/observability-and-evals.md)):
+
+```bash
+cd ai-service
+.venv\Scripts\python -m evals.run --suite hard --replay      # from the cache: no key, no model calls, seconds
+.venv\Scripts\python -m evals.run --suite hard              # live, if the prompt, model or retrieval changed
+.venv\Scripts\python -m evals.run --suite redteam --no-guard # what the attacks do without the output guard
+```
+
+The older one-off scripts in `ai-service/evals/` (`hard_eval`, `agent_eval`, ...) still work and need a Gemini key unless run with `--retrieval-only`:
 
 ```bash
 cd ai-service
@@ -114,7 +124,7 @@ ai-service/   FastAPI service: chunking, embeddings, Chroma, hybrid retrieval, g
 api/          ASP.NET Core API: accounts (Identity), SQLite persistence, the AI-service client, the committed OpenAPI contract (openapi/v1.json)
 web/          Angular app: sign-in, documents, chat; types generated from the API contract
 e2e/          Playwright end-to-end tests and the screenshot generator
-docs/         architecture.md (the decision log), deployment.md (running it on a server) and the screenshots
+docs/         architecture.md (the decision log), deployment.md (running it on a server), observability-and-evals.md and the screenshots
 scripts/      setup.ps1
 ```
 
@@ -128,6 +138,7 @@ Each is an entry in [docs/architecture.md](docs/architecture.md) with what was c
 - **Clarifying questions**: three options compared on retrieval before building one, with the caveats.
 - **Persistence and consistency** between a database and a derived index that cannot share a transaction.
 - **Accounts and isolation** at three layers, and the bugs the tests and a live run found along the way.
+- **Evaluation as a regression gate, a guard that was never needed, and what the first trace found**: step 8 in the decision log.
 - **Production readiness**: what a browser is told, who the API believes behind a proxy, quotas, and an index that repairs itself when a host's disk does not last.
 
 ## What is not here

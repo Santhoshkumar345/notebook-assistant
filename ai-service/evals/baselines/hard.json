@@ -1,0 +1,1054 @@
+{
+ "meta": {
+  "suite": "hard",
+  "fingerprint": "9d18f5ff1e7c",
+  "created": "2026-11-01T07:35:43.490495+00:00",
+  "git": {
+   "sha": "0ae2146",
+   "dirty": true
+  },
+  "model": "gemini-3.5-flash-lite",
+  "k": 4,
+  "n_cases": 26,
+  "mode": "generation",
+  "judge": false,
+  "guard": true
+ },
+ "metrics": {
+  "retrieval_hit": {
+   "value": 1.0,
+   "n": 20,
+   "successes": 20,
+   "ci": [
+    0.8388698745050667,
+    1.0
+   ],
+   "direction": "higher"
+  },
+  "mrr": {
+   "value": 0.7708333333333333,
+   "n": 20,
+   "successes": null,
+   "ci": null,
+   "direction": "higher"
+  },
+  "answered": {
+   "value": 0.95,
+   "n": 20,
+   "successes": 19,
+   "ci": [
+    0.7638641064874331,
+    0.9911187805671268
+   ],
+   "direction": "higher"
+  },
+  "cites_gold": {
+   "value": 0.95,
+   "n": 20,
+   "successes": 19,
+   "ci": [
+    0.7638641064874331,
+    0.9911187805671268
+   ],
+   "direction": "higher"
+  },
+  "generation_given_retrieval": {
+   "value": 0.95,
+   "n": 20,
+   "successes": 19,
+   "ci": [
+    0.7638641064874331,
+    0.9911187805671268
+   ],
+   "direction": "higher"
+  },
+  "unsupported_answer": {
+   "value": 0.0,
+   "n": 6,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.3903430336530645
+   ],
+   "direction": "lower"
+  },
+  "guard_triggered": {
+   "value": 0.0,
+   "n": 26,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.12873304380462175
+   ],
+   "direction": null
+  }
+ },
+ "usage": {
+  "input_tokens": 22242,
+  "output_tokens": 1256,
+  "live_calls": 26,
+  "cached_calls": 0,
+  "latency_ms_p50": 1040.1,
+  "latency_ms_p95": 1527.0,
+  "latency_measured_on": 26
+ },
+ "cases": [
+  {
+   "id": "hard-01",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.3333333333333333,
+   "status": "answered",
+   "answer": "Recall saturated at 50 (the knee), meaning ef_search >= 50 achieved a recall of 1.000.",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#2",
+    "week-07.md#0",
+    "week-07.md#1",
+    "week-03.md#7"
+   ],
+   "latency_ms": 1116.0,
+   "input_tokens": 795,
+   "output_tokens": 57
+  },
+  {
+   "id": "hard-02",
+   "kind": "answerable",
+   "tags": [
+    "numeric"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "With a fair argpartition baseline, exact search took 0.25 ms per query at a recall of 1.000. HNSW with ef_search=10 (the lowest breadth setting mentioned) took 0.22 ms per query at a recall of 0.922.",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#1",
+    "week-07.md#2",
+    "week-07.md#0",
+    "week-03.md#7"
+   ],
+   "latency_ms": 1017.4,
+   "input_tokens": 794,
+   "output_tokens": 93
+  },
+  {
+   "id": "hard-03",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "The collection.modify(ef_search=...) call updated the reported configuration, but it did not change the behavior in chromadb 1.5.9.",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#0",
+    "week-07.md#1",
+    "week-06.md#9",
+    "week-07.md#7"
+   ],
+   "latency_ms": 928.2,
+   "input_tokens": 781,
+   "output_tokens": 61
+  },
+  {
+   "id": "hard-04",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "A fixed similarity cutoff of 0.75 would have been a mistake because relevant results had cosine similarities of 0.596 and 0.376, meaning that a 0.75 cutoff would have incorrectly rejected the correct answers.",
+   "cited": [
+    "week-07.md#2"
+   ],
+   "retrieved": [
+    "week-03.md#6",
+    "week-07.md#2",
+    "week-04.md#3",
+    "week-07.md#3"
+   ],
+   "latency_ms": 987.7,
+   "input_tokens": 861,
+   "output_tokens": 81
+  },
+  {
+   "id": "hard-05",
+   "kind": "answerable",
+   "tags": [
+    "numeric"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "A cosine similarity of -0.063.",
+   "cited": [
+    "week-07.md#3"
+   ],
+   "retrieved": [
+    "week-07.md#3",
+    "week-07.md#2",
+    "project-architecture.md#15",
+    "week-02.md#5"
+   ],
+   "latency_ms": 998.1,
+   "input_tokens": 885,
+   "output_tokens": 39
+  },
+  {
+   "id": "hard-06",
+   "kind": "answerable",
+   "tags": [
+    "multi-fact"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Chunks over the 256-token limit lost answers: 2500-char chunks had 50% coverage, whole heading sections had 81%, and 1000-char chunks had 88%.",
+   "cited": [
+    "week-07.md#5"
+   ],
+   "retrieved": [
+    "week-07.md#5",
+    "project-architecture.md#4",
+    "week-07.md#6",
+    "week-07.md#7"
+   ],
+   "latency_ms": 1456.4,
+   "input_tokens": 913,
+   "output_tokens": 79
+  },
+  {
+   "id": "hard-07",
+   "kind": "answerable",
+   "tags": [
+    "multi-fact"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The first run was invalidated because a hack to silence a tokenizer warning disabled truncation inside encode(), and the metric credited answers in a chunk's invisible tail instead of scoring only the visible text.",
+   "cited": [
+    "week-07.md#6"
+   ],
+   "retrieved": [
+    "week-07.md#6",
+    "week-07.md#5",
+    "project-architecture.md#10",
+    "project-architecture.md#4"
+   ],
+   "latency_ms": 1162.0,
+   "input_tokens": 1028,
+   "output_tokens": 66
+  },
+  {
+   "id": "hard-08",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "Silencing a tokenizer warning by setting model_max_length = 10**6 also disabled truncation inside encode(), which invalidated the first run.",
+   "cited": [
+    "week-07.md#6"
+   ],
+   "retrieved": [
+    "week-06.md#3",
+    "week-07.md#6",
+    "week-04.md#6",
+    "week-05.md#3"
+   ],
+   "latency_ms": 1195.8,
+   "input_tokens": 838,
+   "output_tokens": 58
+  },
+  {
+   "id": "hard-09",
+   "kind": "answerable",
+   "tags": [
+    "near-duplicate"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The project is pinned to the gemini-3.5-flash-lite model.",
+   "cited": [
+    "project-architecture.md#7",
+    "project-architecture.md#3"
+   ],
+   "retrieved": [
+    "project-architecture.md#7",
+    "project-architecture.md#8",
+    "project-architecture.md#3",
+    "project-architecture.md#52"
+   ],
+   "latency_ms": 980.3,
+   "input_tokens": 832,
+   "output_tokens": 50
+  },
+  {
+   "id": "hard-10",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "By packing pieces up to a token budget (not a character budget) that includes the prefix, ensuring no chunk can exceed the embedding model's 256-token limit.",
+   "cited": [
+    "project-architecture.md#4"
+   ],
+   "retrieved": [
+    "project-architecture.md#4",
+    "week-07.md#5",
+    "week-07.md#3",
+    "week-07.md#4"
+   ],
+   "latency_ms": 1728.6,
+   "input_tokens": 966,
+   "output_tokens": 52
+  },
+  {
+   "id": "hard-11",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "A 'found' answer that cites nothing valid is treated as uncited and is not trusted.",
+   "cited": [
+    "project-architecture.md#7"
+   ],
+   "retrieved": [
+    "project-architecture.md#7",
+    "project-architecture.md#8",
+    "project-architecture.md#53",
+    "project-architecture.md#49"
+   ],
+   "latency_ms": 1332.0,
+   "input_tokens": 1070,
+   "output_tokens": 48
+  },
+  {
+   "id": "hard-12",
+   "kind": "answerable",
+   "tags": [
+    "multi-fact"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": false,
+    "cites_gold": false,
+    "generation_given_retrieval": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-readme.md#15",
+    "project-architecture.md#2",
+    "project-architecture.md#27",
+    "week-01.md#2"
+   ],
+   "latency_ms": 830.8,
+   "input_tokens": 863,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-13",
+   "kind": "answerable",
+   "tags": [
+    "near-duplicate"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.3333333333333333,
+   "status": "answered",
+   "answer": "No, the retrieval evaluations need no API key.",
+   "cited": [
+    "project-readme.md#7"
+   ],
+   "retrieved": [
+    "project-architecture.md#24",
+    "project-readme.md#4",
+    "project-readme.md#7",
+    "project-architecture.md#6"
+   ],
+   "latency_ms": 1024.5,
+   "input_tokens": 788,
+   "output_tokens": 34
+  },
+  {
+   "id": "hard-14",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.25,
+   "status": "answered",
+   "answer": "The project is currently an early build where ingestion, retrieval, grounded generation with verified citations, hybrid retrieval, evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer, the ASP.NET Core API, and the Angular app exist, while deployment does not yet.",
+   "cited": [
+    "project-readme.md#0"
+   ],
+   "retrieved": [
+    "project-architecture.md#53",
+    "project-readme.md#1",
+    "project-architecture.md#25",
+    "project-readme.md#0"
+   ],
+   "latency_ms": 1168.2,
+   "input_tokens": 851,
+   "output_tokens": 84
+  },
+  {
+   "id": "hard-15",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Floating-point non-associativity across batched GPU execution and load balancing can cause the computed probabilities to shift between calls, making temperature=0 not reproducible.",
+   "cited": [
+    "week-05.md#1"
+   ],
+   "retrieved": [
+    "week-05.md#1",
+    "project-architecture.md#25",
+    "week-01.md#7",
+    "week-05.md#7"
+   ],
+   "latency_ms": 1220.5,
+   "input_tokens": 887,
+   "output_tokens": 60
+  },
+  {
+   "id": "hard-16",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Writing 'Unknown' is worse because a sentinel string passes validation and is indistinguishable from real data.",
+   "cited": [
+    "week-05.md#6"
+   ],
+   "retrieved": [
+    "week-05.md#6",
+    "week-06.md#3",
+    "week-03.md#6",
+    "week-04.md#5"
+   ],
+   "latency_ms": 1309.4,
+   "input_tokens": 846,
+   "output_tokens": 48
+  },
+  {
+   "id": "hard-17",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "Least privilege and code-level gates are the strongest defenses because they hold even when the model is fooled, though they bound damage rather than eliminate it.",
+   "cited": [
+    "week-06.md#8"
+   ],
+   "retrieved": [
+    "week-06.md#6",
+    "week-06.md#8",
+    "week-06.md#10",
+    "week-06.md#7"
+   ],
+   "latency_ms": 1199.0,
+   "input_tokens": 737,
+   "output_tokens": 58
+  },
+  {
+   "id": "hard-18",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "For relative dates, you should inject the current date.",
+   "cited": [
+    "week-06.md#4"
+   ],
+   "retrieved": [
+    "week-06.md#4",
+    "week-03.md#6",
+    "week-03.md#7",
+    "week-02.md#5"
+   ],
+   "latency_ms": 997.8,
+   "input_tokens": 796,
+   "output_tokens": 39
+  },
+  {
+   "id": "hard-19",
+   "kind": "answerable",
+   "tags": [
+    "numeric"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Chain-of-thought (CoT) answers averaged 310 output tokens.",
+   "cited": [
+    "week-06.md#1"
+   ],
+   "retrieved": [
+    "week-06.md#1",
+    "project-architecture.md#8",
+    "week-07.md#3",
+    "project-architecture.md#52"
+   ],
+   "latency_ms": 1527.0,
+   "input_tokens": 825,
+   "output_tokens": 46
+  },
+  {
+   "id": "hard-20",
+   "kind": "answerable",
+   "tags": [
+    "paraphrase"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Real training uses adaptive optimizers (such as Adam) instead of one shared learning rate for every parameter.",
+   "cited": [
+    "week-03.md#2"
+   ],
+   "retrieved": [
+    "week-03.md#2",
+    "week-04.md#0",
+    "week-03.md#9",
+    "week-04.md#3"
+   ],
+   "latency_ms": 941.9,
+   "input_tokens": 857,
+   "output_tokens": 49
+  },
+  {
+   "id": "hard-near-miss-1",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-07.md#2",
+    "week-07.md#1",
+    "week-07.md#0",
+    "project-architecture.md#10"
+   ],
+   "latency_ms": 1210.4,
+   "input_tokens": 939,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-near-miss-2",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-architecture.md#14",
+    "project-architecture.md#3",
+    "project-architecture.md#8",
+    "project-readme.md#4"
+   ],
+   "latency_ms": 1040.1,
+   "input_tokens": 846,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-near-miss-3",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-architecture.md#39",
+    "project-architecture.md#38",
+    "project-architecture.md#26",
+    "project-architecture.md#57"
+   ],
+   "latency_ms": 1201.0,
+   "input_tokens": 771,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-near-miss-4",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#0",
+    "project-architecture.md#14",
+    "project-architecture.md#7",
+    "project-architecture.md#6"
+   ],
+   "latency_ms": 871.1,
+   "input_tokens": 909,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-near-miss-5",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-07.md#3",
+    "project-readme.md#3",
+    "week-03.md#5",
+    "week-04.md#8"
+   ],
+   "latency_ms": 978.2,
+   "input_tokens": 750,
+   "output_tokens": 22
+  },
+  {
+   "id": "hard-near-miss-6",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-architecture.md#25",
+    "week-05.md#1",
+    "week-04.md#8",
+    "week-05.md#6"
+   ],
+   "latency_ms": 939.5,
+   "input_tokens": 814,
+   "output_tokens": 22
+  }
+ ],
+ "by_tag": {
+  "retrieval_hit": {
+   "multi-fact": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "near-duplicate": {
+    "value": 1.0,
+    "n": 2,
+    "successes": 2,
+    "ci": [
+     0.34237195288961925,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "numeric": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "paraphrase": {
+    "value": 1.0,
+    "n": 12,
+    "successes": 12,
+    "ci": [
+     0.7574992425007574,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "answered": {
+   "multi-fact": {
+    "value": 0.6666666666666666,
+    "n": 3,
+    "successes": 2,
+    "ci": [
+     0.2076549551264879,
+     0.9385096847238394
+    ],
+    "direction": "higher"
+   },
+   "near-duplicate": {
+    "value": 1.0,
+    "n": 2,
+    "successes": 2,
+    "ci": [
+     0.34237195288961925,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "numeric": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "paraphrase": {
+    "value": 1.0,
+    "n": 12,
+    "successes": 12,
+    "ci": [
+     0.7574992425007574,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "cites_gold": {
+   "multi-fact": {
+    "value": 0.6666666666666666,
+    "n": 3,
+    "successes": 2,
+    "ci": [
+     0.2076549551264879,
+     0.9385096847238394
+    ],
+    "direction": "higher"
+   },
+   "near-duplicate": {
+    "value": 1.0,
+    "n": 2,
+    "successes": 2,
+    "ci": [
+     0.34237195288961925,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "numeric": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "paraphrase": {
+    "value": 1.0,
+    "n": 12,
+    "successes": 12,
+    "ci": [
+     0.7574992425007574,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "generation_given_retrieval": {
+   "multi-fact": {
+    "value": 0.6666666666666666,
+    "n": 3,
+    "successes": 2,
+    "ci": [
+     0.2076549551264879,
+     0.9385096847238394
+    ],
+    "direction": "higher"
+   },
+   "near-duplicate": {
+    "value": 1.0,
+    "n": 2,
+    "successes": 2,
+    "ci": [
+     0.34237195288961925,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "numeric": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "paraphrase": {
+    "value": 1.0,
+    "n": 12,
+    "successes": 12,
+    "ci": [
+     0.7574992425007574,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "unsupported_answer": {
+   "near-miss": {
+    "value": 0.0,
+    "n": 6,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.3903430336530645
+    ],
+    "direction": "lower"
+   }
+  },
+  "guard_triggered": {
+   "multi-fact": {
+    "value": 0.0,
+    "n": 3,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.5615060804490177
+    ],
+    "direction": null
+   },
+   "near-duplicate": {
+    "value": 0.0,
+    "n": 2,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.6576280471103807
+    ],
+    "direction": null
+   },
+   "near-miss": {
+    "value": 0.0,
+    "n": 6,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.3903430336530645
+    ],
+    "direction": null
+   },
+   "numeric": {
+    "value": 0.0,
+    "n": 3,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.5615060804490177
+    ],
+    "direction": null
+   },
+   "paraphrase": {
+    "value": 0.0,
+    "n": 12,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.2425007574992425
+    ],
+    "direction": null
+   }
+  }
+ }
+}

@@ -1,0 +1,879 @@
+{
+ "meta": {
+  "suite": "basic",
+  "fingerprint": "3a81fb72d8cc",
+  "created": "2026-11-01T07:33:43.088054+00:00",
+  "git": {
+   "sha": "0ae2146",
+   "dirty": true
+  },
+  "model": "gemini-3.5-flash-lite",
+  "k": 4,
+  "n_cases": 25,
+  "mode": "generation",
+  "judge": false,
+  "guard": true
+ },
+ "metrics": {
+  "retrieval_hit": {
+   "value": 1.0,
+   "n": 16,
+   "successes": 16,
+   "ci": [
+    0.8063865817272802,
+    1.0
+   ],
+   "direction": "higher"
+  },
+  "mrr": {
+   "value": 0.9270833333333334,
+   "n": 16,
+   "successes": null,
+   "ci": null,
+   "direction": "higher"
+  },
+  "answered": {
+   "value": 0.9375,
+   "n": 16,
+   "successes": 15,
+   "ci": [
+    0.7167073163197013,
+    0.9888809426916687
+   ],
+   "direction": "higher"
+  },
+  "cites_gold": {
+   "value": 0.9375,
+   "n": 16,
+   "successes": 15,
+   "ci": [
+    0.7167073163197013,
+    0.9888809426916687
+   ],
+   "direction": "higher"
+  },
+  "generation_given_retrieval": {
+   "value": 0.9375,
+   "n": 16,
+   "successes": 15,
+   "ci": [
+    0.7167073163197013,
+    0.9888809426916687
+   ],
+   "direction": "higher"
+  },
+  "unsupported_answer": {
+   "value": 0.0,
+   "n": 9,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.2991527535509594
+   ],
+   "direction": "lower"
+  },
+  "guard_triggered": {
+   "value": 0.0,
+   "n": 25,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.13319649395317873
+   ],
+   "direction": null
+  }
+ },
+ "usage": {
+  "input_tokens": 20021,
+  "output_tokens": 1083,
+  "live_calls": 25,
+  "cached_calls": 0,
+  "latency_ms_p50": 1075.7,
+  "latency_ms_p95": 1660.2,
+  "latency_measured_on": 25
+ },
+ "cases": [
+  {
+   "id": "basic-01",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Tamil (4 words) took 48 tokens (~12/word) compared to English's ~1.2 tokens/word.",
+   "cited": [
+    "week-04.md#6"
+   ],
+   "retrieved": [
+    "week-04.md#6",
+    "week-04.md#11",
+    "week-06.md#1",
+    "week-05.md#0"
+   ],
+   "latency_ms": 1660.2,
+   "input_tokens": 816,
+   "output_tokens": 57
+  },
+  {
+   "id": "basic-02",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The scaling by the square root of the dimension is calibrated for the large-magnitude regime that real learned Q and K projections produce, where dot products grow and need to be scaled to prevent attention saturation.",
+   "cited": [
+    "week-04.md#3"
+   ],
+   "retrieved": [
+    "week-04.md#3",
+    "week-04.md#4",
+    "week-04.md#2",
+    "week-03.md#2"
+   ],
+   "latency_ms": 1357.1,
+   "input_tokens": 756,
+   "output_tokens": 68
+  },
+  {
+   "id": "basic-03",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "No, temperature=0 was not reproducible; two identical calls gave different results ('Sprocket' then 'Circuit') because 'deterministic' means greedy over computed probabilities, which can shift between calls due to floating-point non-associativity across batched GPU execution and load balancing.",
+   "cited": [
+    "week-05.md#1"
+   ],
+   "retrieved": [
+    "week-05.md#1",
+    "week-05.md#0",
+    "week-05.md#9",
+    "week-05.md#2"
+   ],
+   "latency_ms": 1309.5,
+   "input_tokens": 796,
+   "output_tokens": 81
+  },
+  {
+   "id": "basic-04",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.3333333333333333,
+   "status": "answered",
+   "answer": "Reasoning models spend max_output_tokens on hidden thinking tokens first, so with a 15-token limit it burned the budget thinking and returned None.",
+   "cited": [
+    "week-05.md#1"
+   ],
+   "retrieved": [
+    "week-06.md#3",
+    "week-06.md#1",
+    "week-05.md#1",
+    "week-07.md#3"
+   ],
+   "latency_ms": 1386.4,
+   "input_tokens": 886,
+   "output_tokens": 61
+  },
+  {
+   "id": "basic-05",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "A tool whitelist controls which functions can run, but it fails to protect against what arguments they receive, meaning argument-level injection into allowed tools remains possible.",
+   "cited": [
+    "week-05.md#4"
+   ],
+   "retrieved": [
+    "week-05.md#4",
+    "week-05.md#5",
+    "week-06.md#8",
+    "week-06.md#7"
+   ],
+   "latency_ms": 1132.2,
+   "input_tokens": 750,
+   "output_tokens": 59
+  },
+  {
+   "id": "basic-06",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "When tested, setting the tool config mode to NONE along with the declared tool reproduced the response \"I don't have real-time weather data\", while setting it to ANY forced the call get_weather('Paris') for the query \"capital of France\".",
+   "cited": [
+    "week-05.md#5"
+   ],
+   "retrieved": [
+    "week-05.md#5",
+    "week-05.md#3",
+    "week-05.md#4",
+    "week-06.md#8"
+   ],
+   "latency_ms": 1340.6,
+   "input_tokens": 731,
+   "output_tokens": 81
+  },
+  {
+   "id": "basic-07",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The model wrote 'Unknown' for a customer name that was not in the email.",
+   "cited": [
+    "week-05.md#6"
+   ],
+   "retrieved": [
+    "week-05.md#6",
+    "week-06.md#7",
+    "week-06.md#3",
+    "week-07.md#3"
+   ],
+   "latency_ms": 1331.7,
+   "input_tokens": 894,
+   "output_tokens": 45
+  },
+  {
+   "id": "basic-08",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The model answered 266 days until December 25.",
+   "cited": [
+    "week-06.md#4"
+   ],
+   "retrieved": [
+    "week-06.md#4",
+    "week-03.md#1",
+    "week-06.md#3",
+    "week-07.md#3"
+   ],
+   "latency_ms": 1083.4,
+   "input_tokens": 841,
+   "output_tokens": 38
+  },
+  {
+   "id": "basic-09",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Chain-of-thought uses about 44x the output tokens compared to a direct answer on multi-digit multiplication, averaging 310 tokens versus 7 tokens.",
+   "cited": [
+    "week-06.md#1"
+   ],
+   "retrieved": [
+    "week-06.md#1",
+    "week-06.md#0",
+    "week-04.md#6",
+    "week-05.md#1"
+   ],
+   "latency_ms": 1014.4,
+   "input_tokens": 925,
+   "output_tokens": 51
+  },
+  {
+   "id": "basic-10",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The vague zero-shot name-format prompt scored 0/6 because it just echoed the names.",
+   "cited": [
+    "week-06.md#0"
+   ],
+   "retrieved": [
+    "week-06.md#0",
+    "week-06.md#10",
+    "week-05.md#6",
+    "week-06.md#2"
+   ],
+   "latency_ms": 1135.4,
+   "input_tokens": 837,
+   "output_tokens": 45
+  },
+  {
+   "id": "basic-11",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "Mutable default arguments are evaluated once at definition time and shared across every instance.",
+   "cited": [
+    "week-01.md#11"
+   ],
+   "retrieved": [
+    "week-01.md#10",
+    "week-01.md#11",
+    "week-01.md#9",
+    "week-01.md#12"
+   ],
+   "latency_ms": 1011.7,
+   "input_tokens": 719,
+   "output_tokens": 43
+  },
+  {
+   "id": "basic-12",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "df.groupby(\"model\")[\"score\"].mean() groups the rows and narrows to just the score column, then averages per group, which returns a Series indexed by model rather than a two-column DataFrame. To get the two-column shape back, you need to use .reset_index(name=...).",
+   "cited": [
+    "week-02.md#4"
+   ],
+   "retrieved": [
+    "week-02.md#4",
+    "week-03.md#7",
+    "week-01.md#7",
+    "week-02.md#6"
+   ],
+   "latency_ms": 1020.7,
+   "input_tokens": 785,
+   "output_tokens": 95
+  },
+  {
+   "id": "basic-13",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The loss exploded from 550 to 5x10^35 in 10 steps, oscillating sign each step.",
+   "cited": [
+    "week-03.md#3"
+   ],
+   "retrieved": [
+    "week-03.md#3",
+    "week-03.md#2",
+    "week-03.md#1",
+    "week-03.md#4"
+   ],
+   "latency_ms": 956.9,
+   "input_tokens": 775,
+   "output_tokens": 52
+  },
+  {
+   "id": "basic-14",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The sentences scored 0.6253 in cosine similarity.",
+   "cited": [
+    "week-03.md#5"
+   ],
+   "retrieved": [
+    "week-03.md#5",
+    "week-03.md#6",
+    "week-07.md#5",
+    "week-04.md#6"
+   ],
+   "latency_ms": 1075.7,
+   "input_tokens": 914,
+   "output_tokens": 42
+  },
+  {
+   "id": "basic-15",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": false,
+    "cites_gold": false,
+    "generation_given_retrieval": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-06.md#7",
+    "week-06.md#3",
+    "week-06.md#6",
+    "week-06.md#2"
+   ],
+   "latency_ms": 858.1,
+   "input_tokens": 735,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-16",
+   "kind": "answerable",
+   "tags": [
+    "notes"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "max_output_tokens=20 results in finish_reason=MAX_TOKENS, truncated JSON, and parsed=None with no exception.",
+   "cited": [
+    "week-05.md#7"
+   ],
+   "retrieved": [
+    "week-05.md#7",
+    "week-06.md#1",
+    "week-05.md#6",
+    "week-06.md#3"
+   ],
+   "latency_ms": 1345.0,
+   "input_tokens": 864,
+   "output_tokens": 45
+  },
+  {
+   "id": "basic-unanswerable-1",
+   "kind": "unanswerable",
+   "tags": [
+    "far-off"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#5",
+    "week-06.md#9",
+    "week-02.md#0",
+    "week-03.md#0"
+   ],
+   "latency_ms": 7564.3,
+   "input_tokens": 721,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-unanswerable-2",
+   "kind": "unanswerable",
+   "tags": [
+    "far-off"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-06.md#7",
+    "week-05.md#5",
+    "week-05.md#0",
+    "week-06.md#4"
+   ],
+   "latency_ms": 1014.7,
+   "input_tokens": 857,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-unanswerable-3",
+   "kind": "unanswerable",
+   "tags": [
+    "far-off"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#5",
+    "week-06.md#3",
+    "week-06.md#4",
+    "week-07.md#6"
+   ],
+   "latency_ms": 771.3,
+   "input_tokens": 858,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-unanswerable-4",
+   "kind": "unanswerable",
+   "tags": [
+    "far-off"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#2",
+    "week-07.md#0",
+    "week-04.md#7",
+    "week-04.md#8"
+   ],
+   "latency_ms": 1117.9,
+   "input_tokens": 654,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-near-miss-1",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-07.md#3",
+    "week-03.md#5",
+    "week-04.md#8",
+    "week-07.md#0"
+   ],
+   "latency_ms": 859.5,
+   "input_tokens": 697,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-near-miss-2",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-07.md#0",
+    "week-07.md#1",
+    "week-07.md#7",
+    "week-07.md#3"
+   ],
+   "latency_ms": 864.5,
+   "input_tokens": 821,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-near-miss-3",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#1",
+    "week-04.md#8",
+    "week-05.md#5",
+    "week-06.md#3"
+   ],
+   "latency_ms": 1012.9,
+   "input_tokens": 790,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-near-miss-4",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-05.md#1",
+    "week-05.md#0",
+    "week-05.md#3",
+    "week-06.md#1"
+   ],
+   "latency_ms": 1023.7,
+   "input_tokens": 845,
+   "output_tokens": 22
+  },
+  {
+   "id": "basic-near-miss-5",
+   "kind": "unanswerable",
+   "tags": [
+    "near-miss"
+   ],
+   "flags": {
+    "unsupported_answer": false,
+    "guard_triggered": false
+   },
+   "reciprocal_rank": null,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "week-06.md#0",
+    "week-06.md#1",
+    "week-06.md#9",
+    "week-06.md#2"
+   ],
+   "latency_ms": 1016.1,
+   "input_tokens": 754,
+   "output_tokens": 22
+  }
+ ],
+ "by_tag": {
+  "retrieval_hit": {
+   "notes": {
+    "value": 1.0,
+    "n": 16,
+    "successes": 16,
+    "ci": [
+     0.8063865817272802,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "answered": {
+   "notes": {
+    "value": 0.9375,
+    "n": 16,
+    "successes": 15,
+    "ci": [
+     0.7167073163197013,
+     0.9888809426916687
+    ],
+    "direction": "higher"
+   }
+  },
+  "cites_gold": {
+   "notes": {
+    "value": 0.9375,
+    "n": 16,
+    "successes": 15,
+    "ci": [
+     0.7167073163197013,
+     0.9888809426916687
+    ],
+    "direction": "higher"
+   }
+  },
+  "generation_given_retrieval": {
+   "notes": {
+    "value": 0.9375,
+    "n": 16,
+    "successes": 15,
+    "ci": [
+     0.7167073163197013,
+     0.9888809426916687
+    ],
+    "direction": "higher"
+   }
+  },
+  "unsupported_answer": {
+   "far-off": {
+    "value": 0.0,
+    "n": 4,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.48990002040399916
+    ],
+    "direction": "lower"
+   },
+   "near-miss": {
+    "value": 0.0,
+    "n": 5,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.43449149475208104
+    ],
+    "direction": "lower"
+   }
+  },
+  "guard_triggered": {
+   "far-off": {
+    "value": 0.0,
+    "n": 4,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.48990002040399916
+    ],
+    "direction": null
+   },
+   "near-miss": {
+    "value": 0.0,
+    "n": 5,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.43449149475208104
+    ],
+    "direction": null
+   },
+   "notes": {
+    "value": 0.0,
+    "n": 16,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.19361341827271994
+    ],
+    "direction": null
+   }
+  }
+ }
+}

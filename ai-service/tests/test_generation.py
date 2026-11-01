@@ -1,3 +1,5 @@
+import pytest
+
 from app.generation import GeneratedAnswer, Status, build_prompt, interpret
 from app.store import Hit
 
@@ -48,3 +50,35 @@ def test_a_found_answer_with_empty_text_is_not_trusted():
 def test_missing_parsed_output_is_an_error_with_the_reason():
     r = interpret(None, HITS, "finish_reason=MAX_TOKENS")
     assert r.status is Status.error and "MAX_TOKENS" in r.detail
+
+
+def test_the_model_client_is_built_once_not_for_every_question(monkeypatch):
+    """Found by the first real trace: building the client takes about 700 ms, and answer_question did it on every request."""
+    from app import generation
+
+    built = []
+    monkeypatch.setenv("GEMINI_API_KEY", "not-a-real-key")
+    monkeypatch.setattr(generation.genai, "Client", lambda api_key: built.append(api_key) or object())
+    generation.get_client.cache_clear()
+    try:
+        assert generation.get_client() is generation.get_client()
+        assert built == ["not-a-real-key"]
+    finally:
+        generation.get_client.cache_clear()
+
+
+def test_a_missing_key_is_not_remembered_so_adding_it_later_works(monkeypatch):
+    from app import generation
+
+    monkeypatch.setattr(generation, "load_dotenv", lambda *a, **k: None)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    generation.get_client.cache_clear()
+    with pytest.raises(KeyError):
+        generation.get_client()
+
+    monkeypatch.setenv("GEMINI_API_KEY", "now-it-is-set")
+    monkeypatch.setattr(generation.genai, "Client", lambda api_key: object())
+    try:
+        assert generation.get_client() is not None
+    finally:
+        generation.get_client.cache_clear()

@@ -1,16 +1,20 @@
 """A harder evaluation set: bigger corpus with overlapping topics, paraphrased and multi-fact questions,
 near-miss unanswerable questions, and poisoned documents.
 
-Corpus = the study notes (weeks 1-7) + the project's own README and architecture doc. Several facts
-appear in more than one place (embedding limits, model aliases, abstention), so retrieval has real
-distractors. Gold phrases are verified against the corpus at run time (see hard_eval.py).
+Corpus = the study notes (weeks 1-7) + a FROZEN copy of the project's README and architecture doc (evals/corpus/, taken from commit
+63df4ed, the last one whose docs still contained every gold phrase). Frozen, because the live docs are rewritten every step: the
+README rewrite of 2026-11-01 silently removed two gold phrases and nothing noticed, since evaluations only run by hand. A dataset
+must not change underneath its answers. Several facts appear in more than one place (embedding limits, model aliases,
+abstention), so retrieval has real distractors. Gold phrases are verified against the corpus at run time (see hard_eval.py)
+and by a test (tests/test_eval_suites.py).
 """
 
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]  # the notebook-assistant repo root
+FROZEN = Path(__file__).resolve().parent / "corpus"
+SAMPLE_DOCS = Path(__file__).resolve().parents[1] / "sample_docs"
 
 
 def norm(s: str) -> str:
@@ -18,9 +22,9 @@ def norm(s: str) -> str:
 
 
 def corpus_docs() -> dict[str, str]:
-    docs = {p.name: p.read_text(encoding="utf-8") for p in sorted((ROOT / "ai-service" / "sample_docs").glob("*.md"))}
-    docs["project-architecture.md"] = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
-    docs["project-readme.md"] = (ROOT / "README.md").read_text(encoding="utf-8")
+    docs = {p.name: p.read_text(encoding="utf-8") for p in sorted(SAMPLE_DOCS.glob("*.md"))}
+    docs["project-architecture.md"] = (FROZEN / "project-architecture.md").read_text(encoding="utf-8")
+    docs["project-readme.md"] = (FROZEN / "project-readme.md").read_text(encoding="utf-8")
     return docs
 
 

@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 
-from app import embeddings
+from app import embeddings, tracing
 from app.hybrid import BM25Index, reciprocal_rank_fusion
 from app.rerank import rerank
 from app.store import Hit, VectorStore
@@ -22,16 +22,23 @@ class Retriever:
         self._bm25 = BM25Index([index_text(h) for h in self._chunks]) if self._chunks else None
 
     def dense(self, query: str, n: int) -> list[Hit]:
-        return self._store.query(embeddings.embed([query])[0], n)
+        with tracing.span("retrieve.dense", **{"retrieve.requested": n}) as current:
+            hits = self._store.query(embeddings.embed([query])[0], n)
+            tracing.annotate(current, **{"retrieve.returned": len(hits)})
+            return hits
 
     def keyword(self, query: str, n: int) -> list[Hit]:
-        if self._bm25 is None:
-            return []
-        return [self._chunks[i] for i in self._bm25.top(query, n)]
+        with tracing.span("retrieve.keyword", **{"retrieve.requested": n}) as current:
+            hits = [] if self._bm25 is None else [self._chunks[i] for i in self._bm25.top(query, n)]
+            tracing.annotate(current, **{"retrieve.returned": len(hits)})
+            return hits
 
     def hybrid(self, query: str, n: int, pool: int = 20) -> list[Hit]:
-        fused = reciprocal_rank_fusion([[h.id for h in self.dense(query, pool)], [h.id for h in self.keyword(query, pool)]])
-        return [replace(self._by_id[cid], score=score) for cid, score in fused[:n]]
+        with tracing.span("retrieve.hybrid", **{"retrieve.requested": n, "retrieve.pool": pool}) as current:
+            fused = reciprocal_rank_fusion([[h.id for h in self.dense(query, pool)], [h.id for h in self.keyword(query, pool)]])
+            hits = [replace(self._by_id[cid], score=score) for cid, score in fused[:n]]
+            tracing.annotate(current, **{"retrieve.returned": len(hits)})
+            return hits
 
     def retrieve(self, query: str, k: int, *, hybrid: bool = False, rerank_pool: int = 0, pool: int = 20) -> list[Hit]:
         """Top-k chunks.

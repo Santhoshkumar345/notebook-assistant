@@ -8,6 +8,7 @@ backs its answer, not that the claim is faithful to it - faithfulness needs a ju
 import os
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from enum import Enum
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel, Field
 
+from app import tracing
+from app.guardrails import has_substance, sanitize_answer
 from app.store import Hit
 
 # Pinned on purpose. `gemini-flash-lite-latest` is a moving alias; on 2026-10-12 it resolved to this model.
@@ -69,9 +72,21 @@ def interpret(parsed: GeneratedAnswer | None, hits: list[Hit], detail: str = "")
     valid = sorted({c for c in parsed.citations if 1 <= c <= len(hits)})
     if not valid or not parsed.answer.strip():
         return RagResult(Status.uncited, "", [], "found=true without a valid citation")
-    return RagResult(Status.answered, parsed.answer.strip(), [hits[c - 1] for c in valid])
+    cited = [hits[c - 1] for c in valid]
+    return guarded(parsed.answer.strip(), cited)
 
 
+def guarded(answer: str, cited: list[Hit]) -> RagResult:
+    """The output guard (guardrails.py) between the model and the person: no image, and no address the cited sources did not already contain."""
+    clean = sanitize_answer(answer, cited)
+    if clean.changed:
+        tracing.annotate(tracing.current_span(), **{"guardrail.links_removed": clean.links_removed, "guardrail.images_removed": clean.images_removed})
+        if not has_substance(clean.text):
+            return RagResult(Status.uncited, "", [], "the answer was only a link or image that the sources do not contain")
+    return RagResult(Status.answered, clean.text, cited)
+
+
+@lru_cache(maxsize=1)  # built once: the first real trace showed construction costs ~700 ms and it used to happen on every question
 def get_client() -> genai.Client:
     load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
@@ -88,12 +103,27 @@ def answer_question(question: str, hits: list[Hit], client: genai.Client | None 
         response_mime_type="application/json",
         response_schema=GeneratedAnswer,
     )
-    for attempt in range(1, 5):
-        try:
-            resp = client.models.generate_content(model=MODEL, contents=build_prompt(question, hits), config=config)
-            detail = f"finish_reason={resp.candidates[0].finish_reason}" if resp.candidates else "no candidates"
-            return interpret(resp.parsed, hits, detail)
-        except (errors.ServerError, errors.ClientError) as e:
-            if e.code not in (429, 503) or attempt == 4:
-                raise
-            time.sleep(3 * 2 ** attempt)  # rate limit / overload: back off and retry
+    with tracing.span("llm.generate", **{"gen_ai.operation.name": "generate_content", "gen_ai.request.model": MODEL}) as current:
+        for attempt in range(1, 5):
+            try:
+                resp = client.models.generate_content(model=MODEL, contents=build_prompt(question, hits), config=config)
+                detail = f"finish_reason={resp.candidates[0].finish_reason}" if resp.candidates else "no candidates"
+                result = interpret(resp.parsed, hits, detail)
+                tracing.annotate(
+                    current, **tracing.usage_attributes(resp), **{"llm.attempts": attempt, "llm.finish_reason": finish_name(resp), "rag.status": result.status.value}
+                )
+                return result
+            except (errors.ServerError, errors.ClientError) as e:
+                if e.code not in (429, 503) or attempt == 4:
+                    tracing.annotate(current, **{"llm.attempts": attempt, "http.status_code": e.code})
+                    raise
+                tracing.event(current, "retry", **{"http.status_code": e.code, "attempt": attempt})
+                time.sleep(3 * 2 ** attempt)  # rate limit / overload: back off and retry
+
+
+def finish_name(response) -> str | None:
+    """Why the model stopped (STOP, MAX_TOKENS, SAFETY, ...), as plain text."""
+    if not getattr(response, "candidates", None):
+        return None
+    reason = response.candidates[0].finish_reason
+    return getattr(reason, "name", None) or (str(reason) if reason is not None else None)
