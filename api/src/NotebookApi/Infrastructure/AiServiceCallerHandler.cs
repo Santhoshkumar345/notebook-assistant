@@ -21,7 +21,7 @@ public sealed class AiServiceCallerHandler(IHttpContextAccessor accessor, IOptio
 
         // No tenant for a call made with nobody signed in (the anonymous health check): the AI service needs none for /health, and
         // refuses a document or question call that arrives without one.
-        if (HttpContextCurrentUser.FromPrincipal(accessor.HttpContext?.User) is { } user)
+        if ((AmbientUser.Current ?? HttpContextCurrentUser.FromPrincipal(accessor.HttpContext?.User)) is { } user)
             request.Headers.TryAddWithoutValidation(TenantHeader, user.ToString("N"));
 
         return base.SendAsync(request, cancellationToken);

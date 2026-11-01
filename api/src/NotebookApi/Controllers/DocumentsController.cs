@@ -20,6 +20,8 @@ public sealed class DocumentsController(DocumentService documents) : ControllerB
     [ProducesResponseType<DocumentInfo>(StatusCodes.Status201Created, "application/json")]
     [ProducesResponseType<DocumentInfo>(StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout, ProblemContent.Type)]

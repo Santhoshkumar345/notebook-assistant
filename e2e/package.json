@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node scripts/clean.mjs && playwright test --project=e2e",
+    "test:production": "node scripts/run.mjs production",
     "screenshots": "node scripts/clean.mjs && playwright test --project=screenshots",
     "typecheck": "tsc --noEmit -p ."
   },

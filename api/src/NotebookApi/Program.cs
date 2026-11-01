@@ -3,6 +3,10 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.Sqlite;
@@ -22,6 +26,7 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.NumberHandlin
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<AiServiceExceptionHandler>();
+builder.Services.AddExceptionHandler<QuotaExceptionHandler>();
 
 builder.Services.AddOptions<AiServiceOptions>()
     .Bind(builder.Configuration.GetSection(AiServiceOptions.Section))
@@ -43,20 +48,86 @@ builder.Services.AddOptions<RateLimitOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services.AddOptions<ProxyOptions>()
+    .Bind(builder.Configuration.GetSection(ProxyOptions.Section))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<QuotaOptions>()
+    .Bind(builder.Configuration.GetSection(QuotaOptions.Section))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<ReconciliationOptions>()
+    .Bind(builder.Configuration.GetSection(ReconciliationOptions.Section))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<KeyStorageOptions>().Bind(builder.Configuration.GetSection(KeyStorageOptions.Section));
+
+builder.Services.AddOptions<HttpLimitOptions>()
+    .Bind(builder.Configuration.GetSection(HttpLimitOptions.Section))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Where the database and the Data Protection keys live. Resolved from options (not read from configuration here) so a host or a test can override them.
+builder.Services.AddSingleton(services =>
+{
+    var database = services.GetRequiredService<IOptions<DatabaseOptions>>().Value.Path;
+    if (!Path.IsPathRooted(database))
+        database = Path.Combine(services.GetRequiredService<IHostEnvironment>().ContentRootPath, database);
+
+    var keys = services.GetRequiredService<IOptions<KeyStorageOptions>>().Value.KeysPath;
+    if (string.IsNullOrWhiteSpace(keys))
+        keys = Path.Combine(Path.GetDirectoryName(database)!, "keys");
+    else if (!Path.IsPathRooted(keys))
+        keys = Path.Combine(services.GetRequiredService<IHostEnvironment>().ContentRootPath, keys);
+
+    return new DeploymentPaths(database, keys);
+});
 builder.Services.AddSingleton<DocumentWriteGate>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 builder.Services.AddDbContext<NotebookDb>((services, db) =>
 {
-    var path = services.GetRequiredService<IOptions<DatabaseOptions>>().Value.Path;
-    if (!Path.IsPathRooted(path))
-        path = Path.Combine(services.GetRequiredService<IHostEnvironment>().ContentRootPath, path);
+    var path = services.GetRequiredService<DeploymentPaths>().DatabasePath;
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     db.UseSqlite(new SqliteConnectionStringBuilder { DataSource = path }.ToString());
 });
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<ConversationService>();
+
+// ----------------------------------------------------------------- behind a proxy, and what must survive a restart
+
+// The keys that encrypt the sign-in cookie and the CSRF tokens. The default (in memory, or a profile folder that may not exist in a container)
+// signs everyone out at every restart, and breaks entirely with two instances.
+builder.Services.AddDataProtection().SetApplicationName("NotebookApi");
+builder.Services.AddOptions<KeyManagementOptions>()
+    .Configure<DeploymentPaths, ILoggerFactory>((o, paths, logs) => o.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(paths.KeysPath), logs));
+
+builder.Services.AddOptions<ForwardedHeadersOptions>()
+    .Configure<IOptions<ProxyOptions>>((o, proxy) =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.KnownProxies.Clear(); // the defaults trust loopback; what is trusted should be exactly what was configured
+        o.KnownIPNetworks.Clear();
+
+        if (proxy.Value.Mode == ForwardedMode.TrustedProxies)
+        {
+            foreach (var address in proxy.Value.KnownProxies)
+                o.KnownProxies.Add(System.Net.IPAddress.Parse(address));
+            foreach (var network in proxy.Value.KnownNetworks)
+                o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+        }
+    });
+
+builder.Services.AddHsts(o =>
+{
+    o.MaxAge = TimeSpan.FromDays(365);
+    o.IncludeSubDomains = true;
+});
 
 // ----------------------------------------------------------------- who is calling
 
@@ -141,6 +212,10 @@ builder.Services.AddRateLimiter(o =>
 
 builder.Services.AddTransient<CorrelationIdHandler>();
 builder.Services.AddTransient<AiServiceCallerHandler>();
+builder.Services.AddSingleton<IndexReconciler>();
+if (builder.Configuration.GetValue($"{ReconciliationOptions.Section}:{nameof(ReconciliationOptions.Enabled)}", true))
+    builder.Services.AddHostedService(services => services.GetRequiredService<IndexReconciler>());
+
 builder.Services.AddHttpClient<IAiServiceClient, AiServiceClient>((services, client) =>
     {
         var options = services.GetRequiredService<IOptions<AiServiceOptions>>().Value;
@@ -153,12 +228,26 @@ builder.Services.AddHttpClient<IAiServiceClient, AiServiceClient>((services, cli
 
 var app = builder.Build();
 
+ProductionChecks.Verify(app.Services); // refuses to start outside Development with a configuration that would only fail later, for someone else
+
 // Creates the database on first run and applies any newer migrations. Fine for one instance; several instances starting at once would need this as a separate deploy step.
 using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<NotebookDb>().Database.Migrate();
 
+// First, so everything after it sees the real client address and scheme. Mode None (the default) does not add it at all: nothing is believed.
+var forwarding = app.Services.GetRequiredService<IOptions<ProxyOptions>>().Value.Mode;
+if (forwarding != ForwardedMode.None)
+    app.UseForwardedHeaders(); // TrustAll leaves the trusted lists empty, which the middleware reads as "believe everyone"
+
+if (!app.Environment.IsDevelopment())
+    app.UseHsts(); // over https only: the middleware itself ignores plain http
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RequestSizeLimitMiddleware>();
+app.UseSpaFiles();
+app.UseRouting(); // explicitly, and after the files: static files step aside for any request routing has already matched, and the SPA fallback matches everything
 
 app.UseAuthentication();
 app.UseMiddleware<XsrfTokenIssuerMiddleware>(); // before authorization, so even the 401 for a signed-out page carries a token (see Csrf)
@@ -172,6 +261,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+// Unauthenticated on purpose: it is what a host's health check calls, and it says nothing but that the process answers.
+app.MapGet("/healthz", (HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Ok(new { status = "ok" });
+}).AllowAnonymous().ExcludeFromDescription();
+
+app.MapSpaFallback();
 
 app.Run();
 

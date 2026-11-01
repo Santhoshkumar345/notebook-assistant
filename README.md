@@ -45,7 +45,7 @@ flowchart LR
   P -- "grounded prompt" --> G["Gemini API"]
 ```
 
-- The **browser** only ever talks to the .NET API (in development the Angular dev server proxies `/api`, so there is one origin and no CORS to configure).
+- The **browser** only ever talks to the .NET API. In development the Angular dev server proxies `/api`; in production the API serves the built app itself. Either way there is one origin and no CORS to configure.
 - The **.NET API** owns accounts, document text and chat history in SQLite. The database is the source of truth; the AI service's index is derived from it and can be rebuilt
   (`POST /api/documents/sync`).
 - The **AI service** chunks, embeds, retrieves (dense + BM25, fused) and generates. It trusts only callers holding the shared service key, and takes the user from the API.
@@ -89,10 +89,11 @@ Open http://localhost:4200, create an account, upload a Markdown file, and ask a
 
 | Layer | Command | Tests | What it covers |
 |---|---|---|---|
-| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 125 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key |
-| API | `cd api && dotnet test` | 158 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation |
+| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 130 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit |
+| API | `cd api && dotnet test` | 225 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks |
 | Web | `cd web && npm test` | 266 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
 | End to end | `cd e2e && npm install && npm test` | 28 | the real stack in a real browser, two users side by side, failure and retry, and an accessibility scan of every screen in light, dark and phone width |
+| End to end, as deployed | `cd e2e && npm run test:production` | 38 | the same 28 against the **production build** served by the API, outside Development, behind a proxy that ends TLS, plus 10 about headers, caching, cookies and the policy |
 
 The end-to-end tests run on ports of their own and need no Gemini key: the language model is a deterministic stand-in and everything else is real ([e2e/README.md](e2e/README.md)).
 Most of the security-relevant tests were written test-first and then checked by *breaking the code on purpose* to confirm a test fails; the evidence is recorded per step in
@@ -113,7 +114,7 @@ ai-service/   FastAPI service: chunking, embeddings, Chroma, hybrid retrieval, g
 api/          ASP.NET Core API: accounts (Identity), SQLite persistence, the AI-service client, the committed OpenAPI contract (openapi/v1.json)
 web/          Angular app: sign-in, documents, chat; types generated from the API contract
 e2e/          Playwright end-to-end tests and the screenshot generator
-docs/         architecture.md (the decision log) and the screenshots
+docs/         architecture.md (the decision log), deployment.md (running it on a server) and the screenshots
 scripts/      setup.ps1
 ```
 
@@ -127,11 +128,13 @@ Each is an entry in [docs/architecture.md](docs/architecture.md) with what was c
 - **Clarifying questions**: three options compared on retrieval before building one, with the caveats.
 - **Persistence and consistency** between a database and a derived index that cannot share a transaction.
 - **Accounts and isolation** at three layers, and the bugs the tests and a live run found along the way.
+- **Production readiness**: what a browser is told, who the API believes behind a proxy, quotas, and an index that repairs itself when a host's disk does not last.
 
 ## What is not here
 
-- **Deployment.** Nothing is ready to face the internet yet: TLS (cookies are Secure outside development), forwarded headers behind a proxy, persisted Data Protection keys, a private
-  network between the API and the AI service, the service key in a secret store, and per-user quotas are all deployment work. Keep it on localhost until then.
+- **An actual deployment.** The application is ready to be deployed ([docs/deployment.md](docs/deployment.md): configuration, host options and their catches, a checklist) and its
+  production build is tested end to end, but it has **never run on a real host**: there is no Dockerfile (Docker could not be installed where this was built), no CI, and hosting
+  needs an account and usually a card. Every free host sleeps or loses its disk; the API repairs a lost index by itself, but one instance is all it supports.
 - **No email.** So no verification, password reset or account deletion. Registering a taken email says so.
 - **No streaming.** An answer appears all at once, as plain text, which on the free model tier can take 5 to 45 seconds. Stop abandons the wait but not the model call.
 - **Follow-up questions are not understood from earlier turns**, except an answer to a clarifying question. A conversation is a record, not context for the model.

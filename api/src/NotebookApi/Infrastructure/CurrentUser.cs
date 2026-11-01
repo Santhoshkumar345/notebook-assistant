@@ -10,7 +10,7 @@ public interface ICurrentUser
 
 public sealed class HttpContextCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
-    public Guid? Id => FromPrincipal(accessor.HttpContext?.User);
+    public Guid? Id => AmbientUser.Current ?? FromPrincipal(accessor.HttpContext?.User);
 
     /// <summary>The signed-in user's id from a principal, or null for an anonymous one. Also used by the handlers that cannot take scoped services.</summary>
     public static Guid? FromPrincipal(ClaimsPrincipal? principal) =>

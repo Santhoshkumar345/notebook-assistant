@@ -22,6 +22,7 @@ public sealed class AskController(IAiServiceClient ai, ConversationService conve
     [HttpPost]
     [ProducesResponseType<AskResponse>(StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, ProblemContent.Type)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, ProblemContent.Type)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway, ProblemContent.Type)]
@@ -54,6 +55,9 @@ public sealed class AskController(IAiServiceClient ai, ConversationService conve
         {
             return NoSuchConversation();
         }
+
+        if (await conversations.QuotaProblemAsync(request.ConversationId, ct) is { } quotaProblem)
+            return Problem(statusCode: StatusCodes.Status403Forbidden, title: quotaProblem);
 
         var answer = await ai.AskAsync(forAiService, ct);
 

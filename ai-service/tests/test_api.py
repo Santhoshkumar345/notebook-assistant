@@ -130,3 +130,40 @@ def test_the_request_id_is_not_left_set_after_the_request(client):
     from app.api import request_id_var
 
     assert request_id_var.get() == "-"
+
+
+# ----------------------------------------------------------------- request size
+
+def test_a_body_larger_than_the_limit_is_refused_before_it_is_read():
+    with TestClient(support.make_app(), headers=support.headers(support.TENANT_A)) as small:  # default limit: 2 MiB
+        reply = small.post("/documents", content=b"x" * (2 * 1024 * 1024 + 1), headers={"content-type": "application/json"})
+        assert reply.status_code == 413 and "too large" in reply.json()["detail"]
+        assert small.get("/documents").json() == {}  # nothing was stored
+
+
+def test_the_limit_is_configurable_and_a_body_within_it_is_accepted():
+    from app.api import create_app
+
+    app = create_app(tenants=support.make_tenants(answer_from_first_hit), service_key=support.SERVICE_KEY, max_body_bytes=300)
+    with TestClient(app, headers=support.headers(support.TENANT_A)) as tiny:
+        assert tiny.post("/documents", json={"name": "ok.md", "content": "# Fits"}).status_code == 201
+        assert tiny.post("/documents", json={"name": "big.md", "content": "x" * 400}).status_code == 413
+
+
+def test_the_biggest_document_the_service_accepts_is_under_the_default_limit_even_when_every_character_is_escaped():
+    import json
+
+    from app.api import DEFAULT_MAX_BODY_BYTES
+
+    worst_case = len(json.dumps({"name": "a.md", "content": '"' * MAX_DOC_CHARS}).encode())
+    assert worst_case < DEFAULT_MAX_BODY_BYTES
+
+
+def test_a_body_that_declares_a_nonsense_length_is_a_400_not_a_crash(client):
+    reply = client.post("/documents", content=b"{}", headers={"content-type": "application/json", "content-length": "lots"})
+    assert reply.status_code == 400
+
+
+def test_the_413_still_carries_a_request_id(client):
+    reply = client.post("/documents", content=b"x" * (2 * 1024 * 1024 + 1), headers={"content-type": "application/json"})
+    assert reply.status_code == 413 and reply.headers["x-request-id"]

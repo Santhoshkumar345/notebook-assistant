@@ -182,7 +182,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             using var scope = _factory.Services.CreateScope();
             var documents = new DocumentService(
                 db, scope.ServiceProvider.GetRequiredService<IAiServiceClient>(), _factory.Clock,
-                scope.ServiceProvider.GetRequiredService<DocumentWriteGate>(), new FixedUser(_user.Id));
+                scope.ServiceProvider.GetRequiredService<DocumentWriteGate>(), new FixedUser(_user.Id), Microsoft.Extensions.Options.Options.Create(new QuotaOptions()));
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => documents.UpsertAsync(new DocumentIn { Name = "a.md", Content = "# A" }, cancel.Token));
         });
 

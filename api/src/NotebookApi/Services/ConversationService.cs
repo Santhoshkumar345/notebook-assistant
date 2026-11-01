@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NotebookApi.Contracts;
 using NotebookApi.Data;
+using NotebookApi.Infrastructure;
 
 namespace NotebookApi.Services;
 
@@ -9,7 +11,7 @@ namespace NotebookApi.Services;
 /// Chat history. A conversation is a record of what was asked and answered, not context given to the model: the AI service
 /// takes one question at a time, so a follow-up such as "and the second one?" is not understood from earlier turns.
 /// </summary>
-public sealed class ConversationService(NotebookDb db, TimeProvider clock)
+public sealed class ConversationService(NotebookDb db, TimeProvider clock, IOptions<QuotaOptions> quotas)
 {
     public const int MaxTitleChars = 80;
     public const int MaxListLimit = 100;
@@ -17,6 +19,26 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock)
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public Task<bool> ExistsAsync(Guid id, CancellationToken ct) => db.Conversations.AnyAsync(c => c.Id == id, ct);
+
+    /// <summary>
+    /// Why this person may not add another turn (a new conversation, or one more exchange in a full one), or null if they may. Checked before the model
+    /// is asked, so a refusal costs nothing.
+    /// </summary>
+    public async Task<string?> QuotaProblemAsync(Guid? conversationId, CancellationToken ct)
+    {
+        var limits = quotas.Value;
+        if (conversationId is not { } id)
+        {
+            return await db.Conversations.CountAsync(ct) >= limits.MaxConversations
+                ? $"You have reached the limit of {limits.MaxConversations} conversations. Delete one to start another."
+                : null;
+        }
+
+        // two more turns are about to be added: the question and its answer
+        return await db.Messages.CountAsync(m => m.ConversationId == id, ct) + 2 > limits.MaxMessagesPerConversation
+            ? "This conversation is full. Start a new one to keep asking."
+            : null;
+    }
 
     /// <summary>
     /// Saves a finished question and answer together, or nothing. Failed asks are not history: the caller sees the error and retries.

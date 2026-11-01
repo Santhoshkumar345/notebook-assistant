@@ -75,6 +75,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public LogCapture Logs { get; } = new();
     public ManualClock Clock { get; } = new();
 
+    // The Data Protection keys go in a folder of this factory's own, so the tests never write into (or depend on) the developer's profile.
+    public string KeysPath { get; } = Path.Combine(Path.GetTempPath(), "notebook-tests-keys-" + Guid.NewGuid().ToString("N"));
+
     public ApiFactory() => _connection.Open();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -84,6 +87,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("AiService:ApiKey", ServiceKey);
         builder.UseSetting("RateLimits:AuthPerMinute", "100000");
         builder.UseSetting("RateLimits:AskPerMinute", "100000");
+        builder.UseSetting("DataProtection:KeysPath", KeysPath);
+        builder.UseSetting("Reconciliation:Enabled", "false"); // the background loop would race the tests; the ones about it call RunOnceAsync themselves
 
         builder.ConfigureLogging(logging => logging.AddProvider(Logs));
         builder.ConfigureTestServices(services =>
@@ -99,6 +104,18 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<TimeProvider>(Clock);
         });
     }
+
+    /// <summary>
+    /// The same application running as it ships (not Development). Registration is declared open, because outside Development the app refuses to
+    /// start without an invite code or that decision; tests of other settings add theirs through <paramref name="configure"/>.
+    /// </summary>
+    public WebApplicationFactory<Program> Production(Action<IWebHostBuilder>? configure = null) =>
+        WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Auth:OpenRegistration", "true");
+            configure?.Invoke(builder);
+        });
 
     /// <summary>The database as nobody sees it: the query filters match no row. Use IgnoreQueryFilters to look at everything.</summary>
     public async Task<T> Db<T>(Func<NotebookDb, Task<T>> work)
@@ -148,7 +165,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) _connection.Dispose();
+        if (!disposing) return;
+        _connection.Dispose();
+        try { Directory.Delete(KeysPath, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 }
 

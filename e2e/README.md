@@ -15,6 +15,7 @@ good real answers are is measured by the evaluation harnesses in `ai-service/eva
 cd e2e
 npm install
 npm test            # 28 tests, about two minutes (the first run also builds the .NET API)
+npm run test:production   # 38 tests against the production build, see below
 ```
 
 - It uses a browser already on the machine: Edge by default, `E2E_BROWSER=chrome` for Chrome. Nothing is downloaded.
@@ -22,6 +23,20 @@ npm test            # 28 tests, about two minutes (the first run also builds the
   `scripts/setup.ps1`: it uses its own throwaway service key for its own throwaway stack.
 - Every test registers its own people with random emails and passwords, so tests are independent and run in parallel. Tracing is off, because a trace
   would record what was typed into the password fields.
+
+## As deployed
+
+`npm run test:production` builds the Angular app for production and runs the same tests against it as it would be deployed (`scripts/run.mjs`):
+
+- the API **serves the built app itself** (`ASPNETCORE_WEBROOT`), so there is no Angular dev server and one origin;
+- the API runs **outside Development**, so Secure cookies, the refusal of plain http and the startup checks are all live;
+- a small **proxy** (`scripts/proxy.mjs`) stands in for a host's edge: it overwrites `X-Forwarded-Proto` and `X-Forwarded-For` as a real one does, passes a browser
+  that walks away on to the API as a cancelled request, and the API believes only that proxy's network (`ForwardedHeaders:Mode=TrustedProxies`).
+
+`production.spec.ts` adds the tests only this shape can run (they are skipped in `npm test`): the page's security headers, no content-security-policy violation during a whole
+session, a reload on a deep link, content-hashed files cached for good, a missing file and an unknown API address answered honestly, Secure cookies, and that a visitor
+cannot name their own address. Not covered: a real https connection (the browser reaches the stand-in proxy over plain http on localhost, where browsers still accept Secure
+cookies), a real host, Linux.
 
 ## What is covered
 

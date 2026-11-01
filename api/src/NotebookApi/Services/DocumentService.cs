@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NotebookApi.Clients;
 using NotebookApi.Contracts;
 using NotebookApi.Data;
@@ -36,8 +38,11 @@ public sealed class DocumentWriteGate
 /// Pending, and is confirmed only once the AI service accepts it. A failure leaves a Failed row that can be re-indexed, never a
 /// document that exists in one place and silently not in the other.
 /// </summary>
-public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProvider clock, DocumentWriteGate gate, ICurrentUser currentUser)
+public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProvider clock, DocumentWriteGate gate, ICurrentUser currentUser, IOptions<QuotaOptions> quotas)
 {
+    /// <summary>A document still marked Pending after this long was not finished by whatever was uploading it (a crash, a restart): it is sent again.</summary>
+    private static readonly TimeSpan PendingGrace = TimeSpan.FromMinutes(2);
+
     private Guid UserId => currentUser.Id ?? throw new InvalidOperationException("Documents can only be changed by a signed-in user.");
 
     public async Task<IReadOnlyList<DocumentInfo>> ListAsync(CancellationToken ct)
@@ -55,6 +60,7 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
         using var _ = await gate.EnterAsync(UserId, ct);
 
         var row = await db.Documents.SingleOrDefaultAsync(d => d.Name == input.Name, ct);
+        await EnforceQuotaAsync(row, input, ct); // before anything is saved or sent: a refused upload costs nothing
         var created = row is null;
         var now = clock.GetUtcNow();
         if (row is null)
@@ -72,6 +78,58 @@ public sealed class DocumentService(NotebookDb db, IAiServiceClient ai, TimeProv
 
         await IndexAsync(row, ct);
         return (ToInfo(row), created);
+    }
+
+    /// <summary>
+    /// Repairs this person's index without being asked: re-sends every stored document the AI service does not have (or holds with a different chunk
+    /// count), every Failed one, and every one left Pending by something that stopped. Adds only; deleting what the database does not know about is
+    /// left to <see cref="SyncAsync"/>. Returns how many were re-sent. Throws <see cref="AiServiceException"/> when the AI service is down, busy or slow,
+    /// because the next document would meet the same wall.
+    /// </summary>
+    public async Task<int> ReconcileAsync(CancellationToken ct)
+    {
+        using var _ = await gate.EnterAsync(UserId, ct);
+        var indexed = await ai.GetDocumentsAsync(ct); // inside the gate: an upload that is in flight would otherwise look missing
+
+        var staleBefore = clock.GetUtcNow() - PendingGrace;
+        var repaired = 0;
+        foreach (var row in await db.Documents.OrderBy(d => d.Name).ToListAsync(ct))
+        {
+            var needsSending = row.Status switch
+            {
+                DocumentStatus.Indexed => !indexed.TryGetValue(row.Name, out var chunks) || chunks != row.Chunks,
+                DocumentStatus.Failed => true,
+                _ => row.UpdatedAt < staleBefore,
+            };
+            if (!needsSending) continue;
+
+            try
+            {
+                await IndexAsync(row, ct);
+                repaired++;
+            }
+            catch (AiServiceException failure) when (failure.Failure is UpstreamFailure.BadGateway or UpstreamFailure.ContractMismatch)
+            {
+                // this document was refused (and is now marked Failed); the AI service itself is fine, so carry on with the others
+            }
+        }
+
+        return repaired;
+    }
+
+    private async Task EnforceQuotaAsync(StoredDocument? existing, DocumentIn input, CancellationToken ct)
+    {
+        var limits = quotas.Value;
+        if (existing is null && await db.Documents.CountAsync(ct) >= limits.MaxDocuments)
+            throw new QuotaExceededException($"You have reached the limit of {limits.MaxDocuments} documents. Delete one to add another.");
+
+        var stored = await db.Documents.SumAsync(d => (long)d.Content.Length, ct);
+        var after = stored - (existing?.Content.Length ?? 0) + input.Content.Length;
+        if (after > limits.MaxTotalDocumentChars)
+        {
+            throw new QuotaExceededException(
+                $"Your documents would hold {after.ToString("N0", CultureInfo.InvariantCulture)} characters, and the limit is {limits.MaxTotalDocumentChars.ToString("N0", CultureInfo.InvariantCulture)}. Delete or shorten a document to make room.");
+        }
     }
 
     /// <summary>Re-sends one stored document to the AI service. Null if there is no such document.</summary>

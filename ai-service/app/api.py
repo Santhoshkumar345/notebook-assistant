@@ -35,6 +35,8 @@ logger = logging.getLogger("notebook.api")
 
 NAME_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,98}\.md$"
 MAX_DOC_CHARS = 200_000
+# A document is at most 200,000 characters, about 1.2 MB once JSON-escaped in the worst case; anything larger is refused before it is read.
+DEFAULT_MAX_BODY_BYTES = 2 * 1024 * 1024
 DEFAULT_DATA_DIR = str(FsPath(__file__).resolve().parent.parent / "data" / "chroma")
 
 
@@ -100,8 +102,10 @@ def configure_logging() -> None:
 MIN_KEY_CHARS = 16
 
 
-def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR, service_key: str | None = None) -> FastAPI:
+def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR, service_key: str | None = None, max_body_bytes: int | None = None) -> FastAPI:
     configure_logging()
+
+    body_limit = max_body_bytes if max_body_bytes is not None else int(os.environ.get("AI_MAX_BODY_BYTES", DEFAULT_MAX_BODY_BYTES))
 
     expected_key = service_key or os.environ.get("AI_SERVICE_KEY", "")
     if not expected_key:
@@ -129,6 +133,16 @@ def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR,
 
     # The key is a dependency of the whole app, so no route can be added without it and it is checked before anything else (tenant included).
     app = FastAPI(title="Notebook Assistant - AI service", version="0.1.0", lifespan=lifespan, dependencies=[Depends(require_service_key)])
+
+    @app.middleware("http")
+    async def body_limit_middleware(request: Request, call_next):
+        # The declared size is checked before the body is read. The only caller is the .NET API, which enforces its own limit (including for
+        # bodies that declare no length), so this is the second wall, not the only one.
+        declared = request.headers.get("content-length")
+        if declared is not None and (not declared.isdigit() or int(declared) > body_limit):
+            status = 413 if declared.isdigit() else 400
+            return JSONResponse({"detail": "The request body is too large." if status == 413 else "Invalid Content-Length."}, status_code=status)
+        return await call_next(request)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):

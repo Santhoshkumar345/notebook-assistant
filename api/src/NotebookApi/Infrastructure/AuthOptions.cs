@@ -12,6 +12,11 @@ public sealed class AuthOptions
     /// </summary>
     [MinLength(8)]
     public string? InviteCode { get; set; }
+
+    /// <summary>
+    /// Outside Development the app refuses to start unless there is an invite code or this is true: open registration has to be a decision, not a default.
+    /// </summary>
+    public bool OpenRegistration { get; set; }
 }
 
 public sealed class RateLimitOptions

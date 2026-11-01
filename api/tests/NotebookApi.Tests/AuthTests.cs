@@ -68,7 +68,7 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
     public async Task Outside_development_every_cookie_is_marked_Secure_so_it_is_only_ever_sent_over_https()
     {
         // Every other test runs as Development, where the dev server speaks plain http and cookies cannot be Secure; this is the setting that ships.
-        using var production = _factory.WithWebHostBuilder(b => b.UseEnvironment("Production"));
+        using var production = _factory.Production();
         var client = production.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
 
         var me = await client.GetAsync("/api/auth/me");
@@ -84,7 +84,7 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Outside_development_a_plain_http_request_is_refused_not_answered_with_cookies_that_could_leak()
     {
-        using var production = _factory.WithWebHostBuilder(b => b.UseEnvironment("Production"));
+        using var production = _factory.Production();
         var client = production.CreateClient(); // http://localhost
 
         var me = await client.GetAsync("/api/auth/me");
