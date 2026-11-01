@@ -87,6 +87,10 @@ thead th {
   text-align: right;
 }
 
+.row-actions .button + .button {
+  margin-left: 0.4rem;
+}
+
 .block {
   display: block;
   margin-top: 0.25rem;

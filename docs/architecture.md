@@ -268,3 +268,27 @@ Questions whose gold phrases are ALL in the top-k context (20 questions, 94 chun
   - **Memory and storage grow with users.** Each active tenant keeps a keyword index in memory and is never evicted; a per-user write gate is kept for every user who has ever written; nothing limits how many documents or conversations a user may create beyond the rate limits. Fine for a portfolio demo, not for a service.
   - Rows from before accounts existed were deleted by the migration (there was only development data), and the AI service's old shared collection is not served to any tenant.
   - Sign-in timing equalisation is by hashing a dummy password, which is not measured.
+
+### 2026-11-01 - End-to-end tests, screenshots and a README for strangers (step 6)
+
+- **Chosen.**
+  - **Browser tests of the real stack, with only the language model faked.** Playwright starts the Angular app, the .NET API (throwaway database) and the Python service (real embeddings, real retrieval) on ports of their own and drives a browser already on the machine (Edge or Chrome), so nothing is downloaded and a development stack is never touched. The model is a deterministic stand-in (`ai-service/e2e_server.py`) that cites the top retrieved passage and echoes the question it received (`[asked: ...]`), with keywords for the other outcomes (not found, unsupported, rate-limited once, slow, a clarifying question). The echo is the point: a test can see *which person's document was retrieved* and *what text reached the AI service after a clarifying question*. The stand-in has its own tests, so it cannot quietly drift from what its docstring says. Answer *quality* stays with the evaluation harnesses.
+  - **Every test makes its own people** (random email and password, kept only in memory; tracing is off because a trace would record the password fields), so tests are independent and run in parallel.
+  - **An automated accessibility scan (axe-core, WCAG 2.2 AA plus best practices) of every screen and state, in light, dark and phone width.**
+  - **Screenshots are generated, with the real model** (`npm run screenshots`), so the README shows real answers and the pictures can be regenerated when the interface changes.
+  - **A setup script** that makes the service key, puts it in both places and never prints it; and a README rewritten to be followed top to bottom by someone who has never seen the project.
+  - **Deliberately not done:** a CI workflow (persistent configuration that spends GitHub Actions minutes on every push, and not verifiable without pushing) and deployment.
+- **Evidence.** 28 end-to-end tests (auth and guards, documents, chat, two people side by side, failure and retry, clarifying questions, accessibility). 125 Python, 158 .NET and 266 web tests still pass. **Deliberate breakages through the full stack:** every user sharing one tenant in the AI service, the answer to a clarifying question not being marked as one, and the CSRF token not being checked were each caught by a specific end-to-end test. The first also showed the layers are independent: with the AI service's tenant boundary broken, the test that reads another person's conversation *still passed*, because the API's own query filters held.
+- **Found while building it.**
+  1. **A contrast failure only a scan could find:** the red "Delete" confirmation button used white text on a light red in dark mode. Its text colour is now a token per scheme.
+  2. **A skipped heading level:** "Sources" was an `h3` straight under the page's `h1`; it is an `h2`.
+  3. **Two layout flaws only looking at the screenshots revealed**, which no DOM or contrast check had caught: the Re-index and Delete buttons touched, and a few messages left a large empty gap above the composer.
+  4. **A configuration mistake caught by reading before running:** in real-model mode the screenshot run would have written into your development index, because nothing read the data-directory setting. `app_from_env` now honours `AI_DATA_DIR`.
+  5. **A race in my own test:** the answer renders a moment before the address changes to the conversation's id, and a helper read the address at once. It passed in one run and failed in the next; the helper now waits for the address.
+  6. **A selector that matched two things, twice.** The pending question is labelled "Your question, waiting for an answer", which is right for a screen reader. Playwright matches names by *substring*, ignoring case, so it overlapped both the box's label ("Your question") and the answer's ("Answer"). The second overlap only failed when the pending bubble and the answer were on screen in the same instant, so a test passed in one run and failed in the next, and a single green run was misleading. Queries are now exact (or by role), and the suite is run twice in a row before it is trusted.
+- **Limits.**
+  - The tests run against the Angular dev server, not a production build, and in one browser engine at a time. There is no visual-regression testing, and the Stop test waits a fixed 5.5 seconds for the abandoned model call to finish.
+  - The stand-in model cannot reveal anything about retrieval quality, prompt handling or real latency; screenshots contain real model output and so are not reproducible byte for byte.
+  - The accessibility scan finds what a machine can find. It cannot judge whether a screen makes sense with a screen reader, so a manual pass is still owed.
+  - The setup script is PowerShell only.
+  - Nothing runs in CI yet.

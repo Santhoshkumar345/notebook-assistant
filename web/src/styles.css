@@ -9,6 +9,7 @@
   --accent: #2a55c5;
   --accent-text: #ffffff;
   --danger: #a3261d;
+  --on-danger: #ffffff;
   --ok-bg: #e0f3e6;
   --ok-fg: #12552a;
   --warn-bg: #fcefcf;
@@ -31,6 +32,7 @@
     --accent: #7fa2f5;
     --accent-text: #0f1a33;
     --danger: #f2837a;
+    --on-danger: #2b0b08;
     --ok-bg: #173a24;
     --ok-fg: #8fdca8;
     --warn-bg: #43330c;
@@ -113,7 +115,7 @@ code {
 .button.danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .button.small {

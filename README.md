@@ -1,129 +1,142 @@
 # Notebook Assistant
 
-A document Q&A system in the style of NotebookLM: upload documents, ask questions, get answers
-with citations to the exact passages - and abstention when the documents don't contain the answer.
+Upload Markdown documents and ask questions about them. Every answer comes with the passages it is based on, and when the documents do not contain the
+answer the assistant says so instead of guessing. Each person's documents are kept strictly apart from everyone else's.
 
-> Status: **early build.** Ingestion, retrieval, grounded generation with verified citations, hybrid retrieval,
-> evaluation harnesses, a FastAPI service, an opt-in LangGraph agent layer and the ASP.NET Core API (validation,
-> error mapping, document and chat-history persistence, accounts with per-user isolation) and the Angular app with its
-> sign-in, documents and chat pages exist. Deployment does not yet. This README only claims what is built.
+A portfolio project: an Angular app and an ASP.NET Core API in front of a Python retrieval service, designed to run on free tiers and a laptop (8 GB RAM).
 
-## Planned architecture
+| | |
+|---|---|
+| ![An answer with its sources](docs/screenshots/chat-answer.png) | ![The documents page](docs/screenshots/documents.png) |
+| An answer, with the passages it cites. Real model output. | Documents are stored here and indexed for search. |
 
-```
-Angular UI          built: documents page (upload, status, re-index, delete, sync) and chat page (ask, citations, clarifying questions)
-   |
-ASP.NET Core API    built: validation, errors, correlation id, documents + chat history in SQLite; users, streaming planned
-   |
-FastAPI AI service  ingest -> chunk -> embed -> Chroma -> retrieve -> Gemini   (in progress)
-   |                + LangGraph agent: retrieve / summarize / ask a clarifying question (planned)
-Gemini API + local embeddings + Chroma
-```
+<details>
+<summary>More screenshots: a clarifying question, dark mode, phone width, sign-in</summary>
 
-Everything is designed to run on free tiers and a laptop (8 GB RAM). See [docs/architecture.md](docs/architecture.md)
-for the design decisions, the evidence behind each, and what that evidence does *not* show.
-
-## What exists today
-
-| Piece | Where | State |
+| | | |
 |---|---|---|
-| Structure-aware chunking under the embedding model's token limit | `ai-service/app/chunking.py` | built, tested |
-| Local embeddings (`all-MiniLM-L6-v2`) | `ai-service/app/embeddings.py` | built |
-| Chroma vector store | `ai-service/app/store.py` | built |
-| Grounded generation: numbered sources, citations verified in code, abstention | `ai-service/app/generation.py` | built, tested |
-| Retrieval evaluation with error analysis (16 questions) | `ai-service/evals/retrieval_eval.py` | built |
-| First end-to-end evaluation (25 questions) | `ai-service/evals/generation_eval.py` | built; **saturated** |
-| Harder evaluation: 20 questions, near-miss negatives, poisoned documents | `ai-service/evals/hard_eval.py` | built; baseline for the next step |
-| Hybrid search (dense + BM25, RRF) and optional cross-encoder reranking | `ai-service/app/hybrid.py`, `rerank.py`, `retrieval.py` | built; hybrid is the default |
-| Retrieval strategy comparison on the harder set | `ai-service/evals/retrieval_compare.py` | built |
-| FastAPI service: `/health`, `/documents`, `/ask`, typed contract, error mapping | `ai-service/app/api.py`, `service.py` | built, tested, smoke-tested live |
-| Agent layer (LangGraph): route, retrieve, summarize, clarify, one bounded retry; `"mode": "agent"` on `/ask` | `ai-service/app/agent.py` | built, opt-in, tested offline |
-| Agent vs. pipeline evaluation (resumable) and an independent router check | `ai-service/evals/agent_eval.py`, `router_check.py` | built; results and limits in `docs/architecture.md` |
-| ASP.NET Core API: validation, typed client, ProblemDetails error mapping, correlation id, SQLite persistence (documents, conversations), index sync, clarification follow-ups, accounts (ASP.NET Core Identity, cookie session, CSRF, lock-out, rate limits) and per-user isolation; 158 tests | `api/` | built; no auth yet |
-| Angular app: shell with a live health indicator, documents page, chat page (standard and agent modes, cited sources, clarifying-question flow, stop and retry), sign-in and registration with route guards, typed client generated from the API's OpenAPI document; 266 tests | `web/` | built |
-| Retrieval comparison for answering a clarifying question (reply alone vs question plus reply) | `ai-service/evals/clarify_followup_eval.py` | built; results and caveats in `docs/architecture.md` |
-| Blocking-in-`async def` measurement | `ai-service/experiments/event_loop_blocking.py` | built |
+| ![A clarifying question](docs/screenshots/chat-clarify.png) | ![Dark mode](docs/screenshots/chat-dark.png) | ![Phone width](docs/screenshots/chat-phone.png) |
 
-## Run
+![Sign in](docs/screenshots/sign-in.png)
+
+</details>
+
+The screenshots are generated by `npm run screenshots` in [e2e](e2e/README.md), against the real stack and the real model.
+
+## What it does
+
+- **Grounded answers with checked citations.** The model is given numbered passages and must cite them; the code verifies that every citation names a passage it was actually
+  given. An answer that cites nothing valid is shown as "no supported answer", with none of its text.
+- **It abstains.** If the documents do not contain the answer, you are told so. This is measured against near-miss questions that sound answerable but are not.
+- **Standard and agent modes.** The agent can ask a clarifying question when a question is too vague to search, or summarize a whole document. Your reply to a clarifying
+  question is sent together with the original question, which found the right passage in 26 of 30 test cases against 21 of 30 for the reply alone.
+- **Accounts and isolation.** Sign-in with email and password, an HttpOnly cookie session, CSRF protection, lock-out, rate limits. Every row is owned by a user and every query is
+  filtered to the signed-in user, and in the AI service each user has a collection and keyword index of their own.
+- **Honest failure.** A rate-limited model, a stopped request and a session that ended elsewhere each have a defined behaviour that the end-to-end tests exercise.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  B["Browser<br/>Angular app"] -- "session cookie + CSRF token" --> A[".NET API<br/>accounts, history, SQLite"]
+  A -- "service key + tenant id" --> P["Python AI service<br/>FastAPI"]
+  P --> C[("Chroma<br/>one collection per user")]
+  P --> E["Local embeddings<br/>MiniLM"]
+  P -- "grounded prompt" --> G["Gemini API"]
+```
+
+- The **browser** only ever talks to the .NET API (in development the Angular dev server proxies `/api`, so there is one origin and no CORS to configure).
+- The **.NET API** owns accounts, document text and chat history in SQLite. The database is the source of truth; the AI service's index is derived from it and can be rebuilt
+  (`POST /api/documents/sync`).
+- The **AI service** chunks, embeds, retrieves (dense + BM25, fused) and generates. It trusts only callers holding the shared service key, and takes the user from the API.
+- The Angular client's types are **generated from the API's OpenAPI document**, which is committed and checked by a test, so the two cannot silently drift.
+
+The design decisions, the evidence behind each, and what that evidence does *not* show are in [docs/architecture.md](docs/architecture.md).
+
+## Run it
+
+You need Python 3.12, the .NET 10 SDK and Node 22. Commands are for Windows PowerShell; elsewhere, swap `.venv\Scripts\` for `.venv/bin/`.
+
+**1. Once: the Python environment.** The first run also downloads the embedding model (about 90 MB, from Hugging Face).
 
 ```bash
 cd ai-service
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\python -m pytest
-.venv\Scripts\python -m evals.hard_eval --retrieval-only
 ```
 
-The tests and the `--retrieval-only` evaluations need no API key. The generation evaluations call Gemini
-(roughly 25-40 requests, paced for the free tier): copy `.env.example` to `ai-service/.env`, set `GEMINI_API_KEY`,
-then run `.venv\Scripts\python -m evals.hard_eval`.
-
-## Secrets (once)
-
-The AI service and the .NET API share a **service key**, and both refuse to start without it: every document the AI service holds would
-otherwise be open to anyone who can reach it. Make one and put the same value in both places:
+**2. Once: the secrets.** The AI service and the API share a service key and both refuse to start without it. This script makes one, puts it in `ai-service/.env` and gives
+the API the same one through `dotnet user-secrets`, without printing it. Safe to run again.
 
 ```bash
-python -c "import secrets; print(secrets.token_hex(24))"
+scripts\setup.ps1
 ```
 
-- AI service: add `AI_SERVICE_KEY=<the key>` to `ai-service/.env` (gitignored), next to `GEMINI_API_KEY`.
-- API: `cd api/src/NotebookApi`, then `dotnet user-secrets set "AiService:ApiKey" "<the key>"`.
-- Optional, and wanted before the API is reachable by strangers: `dotnet user-secrets set "Auth:InviteCode" "<a code>"` makes registering require it. Open registration hands anyone your model quota.
+Then add your free [Gemini API key](https://aistudio.google.com/apikey) as `GEMINI_API_KEY` in `ai-service/.env` (uploading documents works without it; questions need it).
 
-## Run the AI service
+**3. Three terminals.**
+
+```bash
+cd ai-service && .venv\Scripts\python -m uvicorn app.api:app_from_env --factory --port 8000
+cd api && dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
+cd web && npm install && npm start
+```
+
+Open http://localhost:4200, create an account, upload a Markdown file, and ask about it. Registration can be restricted to people with a code:
+`dotnet user-secrets set "Auth:InviteCode" "<a code>" --project api/src/NotebookApi`.
+
+## Tests
+
+| Layer | Command | Tests | What it covers |
+|---|---|---|---|
+| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 125 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key |
+| API | `cd api && dotnet test` | 158 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation |
+| Web | `cd web && npm test` | 266 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
+| End to end | `cd e2e && npm install && npm test` | 28 | the real stack in a real browser, two users side by side, failure and retry, and an accessibility scan of every screen in light, dark and phone width |
+
+The end-to-end tests run on ports of their own and need no Gemini key: the language model is a deterministic stand-in and everything else is real ([e2e/README.md](e2e/README.md)).
+Most of the security-relevant tests were written test-first and then checked by *breaking the code on purpose* to confirm a test fails; the evidence is recorded per step in
+[docs/architecture.md](docs/architecture.md).
+
+**Evaluations** (how good the answers are, as opposed to whether the code works) need a Gemini key unless run with `--retrieval-only`:
 
 ```bash
 cd ai-service
-.venv\Scripts\python -m uvicorn app.api:app_from_env --factory --port 8000
+.venv\Scripts\python -m evals.hard_eval --retrieval-only    # no key
+.venv\Scripts\python -m evals.hard_eval                     # about 25-40 model calls, paced for the free tier
 ```
 
-Needs `GEMINI_API_KEY` and `AI_SERVICE_KEY` in `ai-service/.env`. Every route needs the service key, and every route that touches documents needs a
-tenant (a user's id as 32 hex characters): each tenant gets its own collection and keyword index. The .NET API supplies both; to call the service by hand:
+## Repository layout
 
-```bash
-curl -X POST http://127.0.0.1:8000/documents -H "X-Service-Key: <the key>" -H "X-Tenant-ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" -H "Content-Type: application/json" -d "{\"name\": \"notes.md\", \"content\": \"# Notes\n\nChroma is the vector store.\"}"
-curl -X POST http://127.0.0.1:8000/ask -H "X-Service-Key: <the key>" -H "X-Tenant-ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" -H "Content-Type: application/json" -d "{\"question\": \"Which vector store is used?\"}"
+```
+ai-service/   FastAPI service: chunking, embeddings, Chroma, hybrid retrieval, grounded generation, LangGraph agent, evals/ and experiments/
+api/          ASP.NET Core API: accounts (Identity), SQLite persistence, the AI-service client, the committed OpenAPI contract (openapi/v1.json)
+web/          Angular app: sign-in, documents, chat; types generated from the API contract
+e2e/          Playwright end-to-end tests and the screenshot generator
+docs/         architecture.md (the decision log) and the screenshots
+scripts/      setup.ps1
 ```
 
-## Run the .NET API
+## Decisions worth reading
 
-Start the AI service first (above), then:
+Each is an entry in [docs/architecture.md](docs/architecture.md) with what was chosen, why, what was measured and what the measurement does not show.
 
-```bash
-cd api
-dotnet test
-dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
-```
+- **Structure-aware chunking** under the embedding model's token limit, and why retrieval is evaluated separately from generation.
+- **Hybrid retrieval** (dense + BM25 fused by rank) and an honest comparison of reranking strategies on a small corpus.
+- **The agent layer**, and the finding that it adds no accuracy on clear questions at twice the model calls, but behaves differently on vague ones.
+- **Clarifying questions**: three options compared on retrieval before building one, with the caveats.
+- **Persistence and consistency** between a database and a derived index that cannot share a transaction.
+- **Accounts and isolation** at three layers, and the bugs the tests and a live run found along the way.
 
-The API listens on `http://127.0.0.1:5247` and forwards to `AiService:BaseUrl` (default `http://127.0.0.1:8000`, set in
-`api/src/NotebookApi/appsettings.json`), presenting the service key and the signed-in user's id as the tenant. Every route except
-`GET /api/health` and the account routes needs a signed-in user. Accounts: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-(an HttpOnly, SameSite=Strict session cookie; unsafe requests also need the `X-XSRF-TOKEN` header, which the web app sends). Other routes: `GET|POST /api/documents`, `DELETE /api/documents/{name}`, `POST /api/documents/{name}/reindex`, `POST /api/documents/sync`;
-`POST /api/ask` (optional `conversationId`, and `answersClarification` when answering a clarifying question); `GET /api/conversations`, `GET|DELETE /api/conversations/{id}`.
-Documents and history live in a SQLite file (`Database:Path`, default `api/src/NotebookApi/App_Data/notebook.db`, created and migrated on first start, not committed).
-The database is the source of truth; the AI service's index is derived from it, and `POST /api/documents/sync` makes the index match.
-Send `X-Request-ID` to trace one request through both services' logs. OpenAPI is served at `/openapi/v1.json` in Development.
+## What is not here
 
-## Run the web app
-
-With the AI service and the .NET API running (above):
-
-```bash
-cd web
-npm install
-npm start
-```
-
-Open `http://localhost:4200`. The dev server proxies `/api` to the .NET API. See [web/README.md](web/README.md) for tests,
-how the API types are generated, and how they are kept in step with the API.
-
-**What protects it:** every route needs the shared service key, and each user's documents live in a collection and keyword index of their own
-(see [docs/architecture.md](docs/architecture.md)). **Known gaps:** no streaming; no email verification, password reset or account deletion;
-and nothing here is ready to face the internet yet: TLS, forwarded headers, persisted Data Protection keys, a private network between the API and
-this service, and the key in a secret store are all deployment work. Keep it on localhost until then.
+- **Deployment.** Nothing is ready to face the internet yet: TLS (cookies are Secure outside development), forwarded headers behind a proxy, persisted Data Protection keys, a private
+  network between the API and the AI service, the service key in a secret store, and per-user quotas are all deployment work. Keep it on localhost until then.
+- **No email.** So no verification, password reset or account deletion. Registering a taken email says so.
+- **No streaming.** An answer appears all at once, as plain text, which on the free model tier can take 5 to 45 seconds. Stop abandons the wait but not the model call.
+- **Follow-up questions are not understood from earlier turns**, except an answer to a clarifying question. A conversation is a record, not context for the model.
+- **One model, small hand-written evaluation sets.** The measurements are evidence, not proof; each has its caveats written next to it.
 
 ## Background
 
-Built while following a structured AI-engineering study plan; the learning log with the experiments
-behind these design choices is in the companion repository `ai-engineer-journey`.
+Built while following a structured AI-engineering study plan; the learning log with the experiments behind these design choices is in the companion repository `ai-engineer-journey`.

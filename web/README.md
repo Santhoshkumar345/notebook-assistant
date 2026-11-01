@@ -12,7 +12,7 @@ npm install
 npm start
 ```
 
-Open http://localhost:4200. The dev server proxies `/api` to the .NET API on `http://127.0.0.1:5247` (`proxy.conf.json`),
+Open http://localhost:4200. The dev server proxies `/api` to the .NET API on `http://127.0.0.1:5247` (`proxy.conf.js`; set `API_TARGET` to point it elsewhere),
 so the browser sees one origin and no CORS configuration is needed.
 
 ```bash
@@ -49,4 +49,4 @@ src/app/
 
 ## Not built yet
 
-End-to-end browser tests, streaming answers, Markdown rendering of answers, multi-file upload, password reset and email verification (the API cannot send email).
+Streaming answers, Markdown rendering of answers, multi-file upload, password reset and email verification (the API cannot send email).

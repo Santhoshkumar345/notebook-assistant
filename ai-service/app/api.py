@@ -186,7 +186,8 @@ def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR,
 
 
 def app_from_env() -> FastAPI:
-    """uvicorn app.api:app_from_env --factory. Reads AI_SERVICE_KEY (and GEMINI_API_KEY) from the environment or ai-service/.env.
+    """uvicorn app.api:app_from_env --factory. Reads AI_SERVICE_KEY (and GEMINI_API_KEY) from the environment or ai-service/.env, and
+    keeps its index in AI_DATA_DIR if set (the end-to-end screenshot run points it at a throwaway directory), else in ai-service/data/chroma.
     A factory, not a module-level `app`, so importing this module never needs a secret and never starts anything."""
-    load_dotenv(FsPath(__file__).resolve().parent.parent / ".env")
-    return create_app()
+    load_dotenv(FsPath(__file__).resolve().parent.parent / ".env")  # a variable already in the environment wins over the file
+    return create_app(data_dir=os.environ.get("AI_DATA_DIR") or DEFAULT_DATA_DIR)
