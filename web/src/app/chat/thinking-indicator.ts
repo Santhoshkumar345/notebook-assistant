@@ -7,7 +7,7 @@ import { interval } from 'rxjs';
   selector: 'app-thinking-indicator',
   template: `
     <div class="thinking" role="status">
-      <span class="dot" aria-hidden="true"></span>
+      <span class="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
       <span>Thinking… {{ seconds() }} s</span>
       @if (seconds() >= SLOW_AFTER_SECONDS) {
         <span class="muted">Free-tier models can be slow. Still working.</span>
@@ -20,20 +20,37 @@ import { interval } from 'rxjs';
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      align-self: flex-start;
       gap: 0.5rem 0.75rem;
-      padding: 0.5rem 0.9rem;
+      padding: 0.5rem 0.6rem 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
       color: var(--muted);
     }
+    /* Three dots passing the baton: motion that says "working", with the words and the elapsed seconds beside it saying the same. */
+    .dots {
+      display: inline-flex;
+      gap: 0.25rem;
+    }
     .dot {
-      width: 0.6rem;
-      height: 0.6rem;
+      width: 0.5rem;
+      height: 0.5rem;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--brand-1);
       animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+    .dot:nth-child(3) {
+      animation-delay: 0.3s;
     }
     @keyframes pulse {
       50% {
-        opacity: 0.25;
+        transform: translateY(-0.3rem);
+        opacity: 0.4;
       }
     }
     @media (prefers-reduced-motion: reduce) {

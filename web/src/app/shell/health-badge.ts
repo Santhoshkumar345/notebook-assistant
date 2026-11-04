@@ -22,8 +22,12 @@ export const HEALTH_POLL_MS = 30_000;
     .health {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.875rem;
+      gap: 0.45rem;
+      padding: 0.2rem 0.7rem 0.2rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      font-size: 0.8125rem;
       color: var(--muted);
     }
     .dot {
@@ -34,12 +38,15 @@ export const HEALTH_POLL_MS = 30_000;
     }
     .ok .dot {
       background: var(--ok-fg);
+      box-shadow: 0 0 0 3px var(--ok-bg);
     }
     .degraded .dot {
       background: var(--warn-fg);
+      box-shadow: 0 0 0 3px var(--warn-bg);
     }
     .down .dot {
       background: var(--bad-fg);
+      box-shadow: 0 0 0 3px var(--bad-bg);
     }
   `,
 })

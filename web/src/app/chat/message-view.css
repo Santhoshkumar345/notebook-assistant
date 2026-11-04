@@ -3,36 +3,96 @@
 }
 
 .turn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   max-width: 46rem;
-  padding: 0.65rem 0.9rem;
+  padding: 0.85rem 1.05rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+/* The person's own words, in the brand colour and on the right, the way every chat is drawn. */
 .turn.user {
+  flex-direction: row-reverse;
   margin-left: auto;
-  background: var(--info-bg);
   border-color: transparent;
-  color: var(--info-fg);
+  border-bottom-right-radius: 6px;
+  background: var(--brand-gradient);
+  box-shadow: var(--shadow-brand);
+  color: #fff;
+}
+
+.turn.user .avatar {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+
+.turn.user .avatar svg {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.turn.assistant {
+  border-bottom-left-radius: 6px;
+}
+
+.turn.answered {
+  border-left: 4px solid var(--brand-1);
 }
 
 .turn.not_found,
 .turn.uncited {
   background: var(--warn-bg);
   border-color: transparent;
+  border-left: 4px solid var(--warn-fg);
   color: var(--warn-fg);
 }
 
 .turn.clarify {
   border-color: var(--accent);
+  border-left-width: 4px;
+  background: var(--accent-soft);
 }
 
 .who {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.2rem;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 650;
   opacity: 0.85;
+}
+
+.turn.user .who {
+  opacity: 1;
 }
 
 .tag {
@@ -47,10 +107,10 @@
 }
 
 .headline {
-  font-weight: 600;
+  font-weight: 650;
 }
 
-/* Secondary text keeps the card's full contrast (a fade would drop it to 4.9:1 in light mode); size carries the hierarchy. */
+/* Secondary text keeps the card's full contrast (a fade would drop it below the AA ratio in light mode); size carries the hierarchy. */
 .turn p.muted {
   margin: 0.25rem 0 0;
   color: inherit;
@@ -58,31 +118,96 @@
 }
 
 .sources {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--border-strong);
 }
 
 .sources h2 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.45rem;
   font-size: 0.8rem;
+  font-weight: 700;
   color: var(--muted);
 }
 
 .sources ol {
+  display: grid;
+  gap: 0.4rem;
   margin: 0;
-  padding-left: 1.25rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: source;
+}
+
+.sources li {
+  counter-increment: source;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition: border-color 0.15s ease;
+}
+
+.sources li:hover,
+.sources li:has(details[open]) {
+  border-color: var(--accent);
 }
 
 summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.35rem;
+  position: relative;
+  padding: 0.5rem 2rem 0.5rem 2.4rem;
+  list-style: none;
   cursor: pointer;
   overflow-wrap: anywhere;
 }
 
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The number of the source, as a small badge. The empty alternative text keeps it from being read out as well as the list's own numbering. */
+summary::before {
+  content: counter(source);
+  content: counter(source) / '';
+  position: absolute;
+  left: 0.55rem;
+  top: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+summary::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 0.8rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+details[open] summary::after {
+  top: 0.95rem;
+  transform: rotate(-135deg);
+}
+
 blockquote {
-  margin: 0.4rem 0 0.4rem 0.25rem;
-  padding-left: 0.75rem;
-  border-left: 3px solid var(--border);
+  margin: 0 0.7rem 0.6rem 2.4rem;
+  padding: 0.1rem 0 0.1rem 0.75rem;
+  border-left: 3px solid var(--brand-1);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 0.9rem;

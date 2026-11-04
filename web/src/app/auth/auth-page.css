@@ -1,14 +1,29 @@
-.auth-card {
-  max-width: 26rem;
-  margin: 2rem auto;
-  padding: 1.5rem;
+/* The form card and the brand panel beside it are one object: a single rounded, lifted surface. Below 48 rem the panel is not shown at all. */
+.auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  max-width: 54rem;
+  margin: 1.5rem auto;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 20px;
   background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-card {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 2.25rem 2rem;
+}
+
+app-auth-showcase {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .auth-card h1 {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
 }
 
 form {
@@ -17,23 +32,34 @@ form {
 }
 
 label {
-  margin-top: 0.5rem;
-  font-weight: 600;
+  margin-top: 0.6rem;
+  font-weight: 650;
+  font-size: 0.925rem;
 }
 
 input {
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input:hover {
+  border-color: var(--accent);
 }
 
 input:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 input[aria-invalid='true'] {
@@ -50,7 +76,8 @@ input[aria-invalid='true'] {
 }
 
 button[type='submit'] {
-  margin-top: 1rem;
+  margin-top: 1.1rem;
+  padding: 0.75rem 1rem;
 }
 
 .switch {
@@ -66,4 +93,18 @@ a {
 .switch a {
   display: inline-block;
   padding: 0.3rem 0.25rem;
+  font-weight: 600;
+}
+
+@media (max-width: 47.99rem) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 0.5rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .auth-card {
+    grid-column: 1;
+    padding: 1.5rem 1.25rem;
+  }
 }

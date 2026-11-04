@@ -1,50 +1,60 @@
 @let m = message();
 @if (m.role === 'user') {
   <article class="turn user" aria-label="You asked">
-    <p class="who">You</p>
-    <p class="text">{{ m.text }}</p>
+    <span class="avatar" aria-hidden="true">
+      <svg viewBox="0 0 20 20" focusable="false"><circle cx="10" cy="7" r="3.2" /><path d="M3.8 17c.8-3.2 3.1-4.8 6.2-4.8s5.4 1.6 6.2 4.8" /></svg>
+    </span>
+    <div class="body">
+      <p class="who">You</p>
+      <p class="text">{{ m.text }}</p>
+    </div>
   </article>
 } @else {
   <article class="turn assistant" [class]="'turn assistant ' + (m.status ?? '')" [attr.aria-label]="label(m.status)">
-    <p class="who">Assistant<span class="tag"> · {{ label(m.status) }}</span></p>
-    @switch (m.status) {
-      @case ('answered') {
-        <p class="text">{{ m.text }}</p>
-        @if (m.sources.length > 0) {
-          <section class="sources" aria-label="Sources">
-            <h2>Sources</h2>
-            <ol>
-              @for (source of m.sources; track source.id) {
-                <li>
-                  <details>
-                    <summary>
-                      <strong>{{ source.source }}</strong>
-                      @if (source.heading) {
-                        <span class="muted"> · {{ source.heading }}</span>
-                      }
-                    </summary>
-                    <blockquote>{{ source.snippet }}</blockquote>
-                  </details>
-                </li>
-              }
-            </ol>
-          </section>
+    <span class="avatar" aria-hidden="true">
+      <svg viewBox="0 0 20 20" focusable="false"><path d="M10 2.5l1.6 4.4 4.4 1.6-4.4 1.6L10 14.5l-1.6-4.4L4 8.5l4.4-1.6z" /><path d="M15.5 13l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" /></svg>
+    </span>
+    <div class="body">
+      <p class="who">Assistant<span class="tag"> · {{ label(m.status) }}</span></p>
+      @switch (m.status) {
+        @case ('answered') {
+          <p class="text">{{ m.text }}</p>
+          @if (m.sources.length > 0) {
+            <section class="sources" aria-label="Sources">
+              <h2>Sources</h2>
+              <ol>
+                @for (source of m.sources; track source.id) {
+                  <li>
+                    <details>
+                      <summary>
+                        <strong>{{ source.source }}</strong>
+                        @if (source.heading) {
+                          <span class="muted"> · {{ source.heading }}</span>
+                        }
+                      </summary>
+                      <blockquote>{{ source.snippet }}</blockquote>
+                    </details>
+                  </li>
+                }
+              </ol>
+            </section>
+          }
+        }
+        @case ('not_found') {
+          <p class="headline">The documents do not contain an answer to this.</p>
+          <p class="muted">Try asking in different words, or upload a document that covers it.</p>
+        }
+        @case ('uncited') {
+          <p class="headline">An answer was drafted, but it could not be backed by a source, so it is not shown.</p>
+          <p class="muted">Try asking in different words, or ask about something narrower.</p>
+        }
+        @case ('clarify') {
+          <p class="text">{{ m.text }}</p>
+        }
+        @default {
+          <p class="text">{{ m.text }}</p>
         }
       }
-      @case ('not_found') {
-        <p class="headline">The documents do not contain an answer to this.</p>
-        <p class="muted">Try asking in different words, or upload a document that covers it.</p>
-      }
-      @case ('uncited') {
-        <p class="headline">An answer was drafted, but it could not be backed by a source, so it is not shown.</p>
-        <p class="muted">Try asking in different words, or ask about something narrower.</p>
-      }
-      @case ('clarify') {
-        <p class="text">{{ m.text }}</p>
-      }
-      @default {
-        <p class="text">{{ m.text }}</p>
-      }
-    }
+    </div>
   </article>
 }

@@ -1,37 +1,40 @@
-<section class="auth-card" aria-labelledby="register-heading">
-  <h1 id="register-heading">Create an account</h1>
+<div class="auth-shell">
+  <app-auth-showcase />
+  <section class="auth-card" aria-labelledby="register-heading">
+    <h1 id="register-heading">Create an account</h1>
 
-  @if (auth.error(); as error) {
-    <p class="banner error" role="alert">{{ describeError(error) }}</p>
-  }
+    @if (auth.error(); as error) {
+      <p class="banner error" role="alert">{{ describeError(error) }}</p>
+    }
 
-  <form (submit)="submit($event)" novalidate>
-    <label for="email">Email</label>
-    <input id="email" name="email" type="email" autocomplete="username" required [value]="email()" (input)="set('email', $event)" />
+    <form (submit)="submit($event)" novalidate>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required [value]="email()" (input)="set('email', $event)" />
 
-    <label for="password">Password</label>
-    <input
-      id="password"
-      name="password"
-      type="password"
-      autocomplete="new-password"
-      required
-      [attr.minlength]="min"
-      [attr.maxlength]="max"
-      [value]="password()"
-      (input)="set('password', $event)"
-      aria-describedby="password-help"
-      [attr.aria-invalid]="passwordProblem() ? 'true' : null"
-    />
-    <p id="password-help" class="muted help" [class.problem]="passwordProblem()">
-      {{ passwordProblem() ?? 'At least ' + min + ' characters. Length matters more than symbols: a few ordinary words work well.' }}
-    </p>
+      <label for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="new-password"
+        required
+        [attr.minlength]="min"
+        [attr.maxlength]="max"
+        [value]="password()"
+        (input)="set('password', $event)"
+        aria-describedby="password-help"
+        [attr.aria-invalid]="passwordProblem() ? 'true' : null"
+      />
+      <p id="password-help" class="muted help" [class.problem]="passwordProblem()">
+        {{ passwordProblem() ?? 'At least ' + min + ' characters. Length matters more than symbols: a few ordinary words work well.' }}
+      </p>
 
-    <label for="invite">Invite code <span class="muted">(only if you were given one)</span></label>
-    <input id="invite" name="invite" type="text" autocomplete="off" [value]="inviteCode()" (input)="set('inviteCode', $event)" />
+      <label for="invite">Invite code <span class="muted">(only if you were given one)</span></label>
+      <input id="invite" name="invite" type="text" autocomplete="off" [value]="inviteCode()" (input)="set('inviteCode', $event)" />
 
-    <button type="submit" class="button primary" [disabled]="!canSubmit()">{{ auth.working() ? 'Creating…' : 'Create account' }}</button>
-  </form>
+      <button type="submit" class="button primary" [disabled]="!canSubmit()">{{ auth.working() ? 'Creating…' : 'Create account' }}</button>
+    </form>
 
-  <p class="muted switch">Already have an account? <a routerLink="/login">Sign in</a></p>
-</section>
+    <p class="muted switch">Already have an account? <a routerLink="/login">Sign in</a></p>
+  </section>
+</div>

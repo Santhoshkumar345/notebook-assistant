@@ -31,6 +31,15 @@
         <p class="muted">Loading conversation…</p>
       } @else if (store.messages().length === 0 && store.sending() === null && store.sendError() === null) {
         <div class="welcome">
+          <svg class="illustration" viewBox="0 0 140 96" aria-hidden="true" focusable="false">
+            <rect x="10" y="8" width="78" height="42" rx="14" class="bubble-a" />
+            <rect x="24" y="22" width="40" height="5" rx="2.5" class="line" />
+            <rect x="24" y="33" width="28" height="5" rx="2.5" class="line" />
+            <rect x="52" y="46" width="78" height="42" rx="14" class="bubble-b" />
+            <rect x="66" y="60" width="44" height="5" rx="2.5" class="line light" />
+            <rect x="66" y="71" width="30" height="5" rx="2.5" class="line light" />
+            <path d="M116 6l2.2 5.8 5.8 2.2-5.8 2.2L116 22l-2.2-5.8-5.8-2.2 5.8-2.2z" class="spark" />
+          </svg>
           <h2>Ask your documents</h2>
           <p class="muted">
             Answers come with the passages they are based on. If the documents do not contain the answer, you are told so instead of getting a guess.

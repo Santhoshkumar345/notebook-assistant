@@ -1,12 +1,29 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="topbar">
-  <a class="brand" routerLink="/">Notebook Assistant</a>
+  <a class="brand" routerLink="/">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="logo-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#4f46e5" />
+          <stop offset="1" stop-color="#7c3aed" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#logo-gradient)" />
+      <rect x="9" y="8" width="14" height="17" rx="3" fill="#fff" />
+      <rect x="12" y="12.5" width="8" height="1.8" rx=".9" fill="#4f46e5" opacity=".85" />
+      <rect x="12" y="16" width="6" height="1.8" rx=".9" fill="#4f46e5" opacity=".6" />
+      <rect x="12" y="19.5" width="7.5" height="1.8" rx=".9" fill="#4f46e5" opacity=".4" />
+      <path d="M24 3.5l1.1 2.9 2.9 1.1-2.9 1.1L24 11.5l-1.1-2.9-2.9-1.1 2.9-1.1z" fill="#fde68a" />
+    </svg>
+    <span>Notebook Assistant</span>
+  </a>
   @if (auth.user(); as user) {
     <nav aria-label="Main">
       <a routerLink="/chat" routerLinkActive="active" ariaCurrentWhenActive="page">Chat</a>
       <a routerLink="/documents" routerLinkActive="active" ariaCurrentWhenActive="page">Documents</a>
     </nav>
     <app-health-badge />
+    <span class="avatar" aria-hidden="true">{{ initial(user.email) }}</span>
     <span class="who" title="Signed in as {{ user.email }}">{{ user.email }}</span>
     <button type="button" class="button small" (click)="auth.logout()">Sign out</button>
   } @else {

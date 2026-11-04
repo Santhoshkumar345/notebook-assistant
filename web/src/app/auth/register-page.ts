@@ -2,12 +2,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { describeError } from '../api/api-error';
+import { AuthShowcase } from './auth-showcase';
 import { AuthStore } from './auth-store';
 import { MAX_PASSWORD_CHARS, MIN_PASSWORD_CHARS, checkPassword, looksLikeEmail } from './credential-checks';
 
 @Component({
   selector: 'app-register-page',
-  imports: [RouterLink],
+  imports: [RouterLink, AuthShowcase],
   templateUrl: './register-page.html',
   styleUrl: './auth-page.css',
 })

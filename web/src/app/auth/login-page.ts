@@ -2,12 +2,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { describeError } from '../api/api-error';
+import { AuthShowcase } from './auth-showcase';
 import { AuthStore } from './auth-store';
 import { safeReturnUrl } from './safe-return-url';
 
 @Component({
   selector: 'app-login-page',
-  imports: [RouterLink],
+  imports: [RouterLink, AuthShowcase],
   templateUrl: './login-page.html',
   styleUrl: './auth-page.css',
 })

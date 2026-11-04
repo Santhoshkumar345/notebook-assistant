@@ -1,22 +1,33 @@
 .composer {
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 
+/* The box you write in lights up when you are in it. The ring is decoration on top of the outline, which is what meets the focus requirement. */
 textarea {
   display: block;
   width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
   resize: vertical;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+textarea:hover {
+  border-color: var(--accent);
 }
 
 textarea:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 textarea[aria-invalid='true'] {
@@ -28,7 +39,7 @@ textarea[aria-invalid='true'] {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 1rem;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
 }
 
 .mode {
@@ -43,23 +54,46 @@ textarea[aria-invalid='true'] {
   float: left;
   margin-right: 0.75rem;
   padding: 0;
+  line-height: 2rem;
   color: var(--muted);
 }
 
-/* The whole label is the touch target (at least 24 px each way), not just the 13 px radio. */
+/* The two modes read as a small segmented switch. The whole label is the touch target (at least 24 px each way), not just the 13 px radio. */
 .mode label {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   min-height: 2rem;
-  padding: 0 0.5rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.9rem;
   cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.mode label:hover {
+  border-color: var(--accent);
+}
+
+.mode label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.mode label:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .mode input {
   width: 1.1rem;
   height: 1.1rem;
   margin: 0;
+  accent-color: var(--brand-1);
 }
 
 .count {
@@ -73,8 +107,12 @@ textarea[aria-invalid='true'] {
   font-weight: 600;
 }
 
+.row .button.primary {
+  padding: 0.55rem 1.4rem;
+}
+
 .help {
-  margin: 0.4rem 0 0;
+  margin: 0.45rem 0 0;
   font-size: 0.85rem;
 }
 

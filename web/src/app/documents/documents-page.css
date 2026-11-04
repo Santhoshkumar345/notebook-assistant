@@ -45,8 +45,9 @@
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
 table {
@@ -56,7 +57,7 @@ table {
 
 th,
 td {
-  padding: 0.65rem 0.85rem;
+  padding: 0.8rem 1rem;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--border);
@@ -67,14 +68,31 @@ tbody tr:last-child > * {
 }
 
 thead th {
+  background: var(--surface-2);
   font-size: 0.8rem;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 650;
+}
+
+tbody tr:hover {
+  background: var(--surface-2);
 }
 
 .name {
-  font-weight: 600;
+  font-weight: 650;
   overflow-wrap: anywhere;
+}
+
+.file-icon {
+  display: inline-block;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0 0.55rem -0.2rem 0;
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .num {
@@ -97,13 +115,52 @@ thead th {
 }
 
 .empty {
-  padding: 2.5rem 1rem;
+  padding: 2.5rem 1rem 2.75rem;
   text-align: center;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+}
+
+.illustration {
+  width: 7.5rem;
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+
+.illustration .page {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.illustration .back {
+  fill: var(--surface-2);
+}
+
+.illustration .front {
+  fill: var(--surface);
+  filter: drop-shadow(0 4px 8px rgba(34, 36, 90, 0.15));
+}
+
+.illustration .line {
+  fill: var(--accent);
+}
+
+.illustration .line.soft {
+  fill: var(--border);
+}
+
+.illustration .badge-circle {
+  fill: var(--brand-1);
+}
+
+.illustration .plus {
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
 .empty h2 {
   margin: 0 0 0.25rem;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }

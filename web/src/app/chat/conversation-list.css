@@ -1,11 +1,14 @@
 .new {
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
   text-align: center;
   text-decoration: none;
 }
 
 ul {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* without this a long title widens the column past the sidebar instead of being cut with an ellipsis */
+  gap: 0.2rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -13,23 +16,30 @@ ul {
 
 li {
   position: relative;
+  min-width: 0;
   border-radius: var(--radius);
 }
 
+li:hover {
+  background: var(--surface-2);
+}
+
+/* The open conversation: a tinted row with a bar on its edge, so it is not shown by colour alone. */
 li.active {
-  background: var(--surface);
-  outline: 1px solid var(--border);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--brand-1);
 }
 
 li a:not(.button) {
   display: block;
-  padding: 0.5rem 2rem 0.5rem 0.65rem;
+  padding: 0.55rem 2rem 0.55rem 0.8rem;
+  border-radius: var(--radius);
   color: var(--text);
   text-decoration: none;
 }
 
 li a:hover .title {
-  text-decoration: underline;
+  color: var(--accent);
 }
 
 .title {
@@ -37,7 +47,7 @@ li a:hover .title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .meta {
@@ -47,7 +57,7 @@ li a:hover .title {
 
 .remove {
   position: absolute;
-  top: 0.35rem;
+  top: 0.5rem;
   right: 0.35rem;
   width: 1.6rem;
   height: 1.6rem;
@@ -71,7 +81,7 @@ li a:hover .title {
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
-  padding: 0.5rem 0.65rem;
+  padding: 0.55rem 0.7rem;
   font-size: 0.9rem;
 }
 
