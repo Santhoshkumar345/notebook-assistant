@@ -56,19 +56,40 @@ test.describe('the production build', () => {
     await expect(page.getByText('plans.md')).toBeVisible(); // the API served the app's page for an address that is only a route inside it
   });
 
-  test('a script and a stylesheet are named by their content and cached for good', async ({ page }) => {
+  test('files named by their content are cached for good, and the ones that are not are always re-checked', async ({ page }) => {
     await page.goto('/');
     const files = await page.evaluate(() => [
       ...Array.from(document.querySelectorAll('script[src]'), (s) => (s as HTMLScriptElement).src),
       ...Array.from(document.querySelectorAll('link[rel=stylesheet]'), (l) => (l as HTMLLinkElement).href),
     ]);
-    expect(files.length).toBeGreaterThanOrEqual(2);
+    expect(files.length).toBeGreaterThanOrEqual(3);
 
     for (const file of files) {
       const response = await page.request.get(file);
       expect(response.status(), file).toBe(200);
-      expect(response.headers()['cache-control'], file).toBe('public, max-age=31536000, immutable');
+      // theme-init.js keeps its own name (it has to: it is read before anything else), so it is the one file that must be re-checked every time
+      const expected = file.endsWith('/theme-init.js') ? 'no-cache' : 'public, max-age=31536000, immutable';
+      expect(response.headers()['cache-control'], file).toBe(expected);
     }
+    expect(files.some((f) => f.endsWith('/theme-init.js')), 'the page loads the script that applies the remembered theme').toBe(true);
+  });
+
+  test('the typefaces are served from this origin, as fonts, and cached for good', async ({ page }) => {
+    await page.goto('/login');
+    await page.evaluate(() => document.fonts.ready);
+    const stylesheet = await page.evaluate(() => (document.querySelector('link[rel=stylesheet]') as HTMLLinkElement).href);
+    const css = await (await page.request.get(stylesheet)).text();
+    const fonts = [...css.matchAll(/url\("?([^")]+\.woff2)"?\)/g)].map((m) => new URL(m[1], stylesheet).href);
+    expect(fonts.length).toBeGreaterThanOrEqual(2);
+
+    for (const font of fonts.slice(0, 3)) {
+      const response = await page.request.get(font);
+      expect(new URL(font).origin, 'no font comes from another origin').toBe(new URL(page.url()).origin);
+      expect(response.status(), font).toBe(200);
+      expect(response.headers()['content-type'], font).toContain('font/woff2');
+      expect(response.headers()['cache-control'], font).toBe('public, max-age=31536000, immutable');
+    }
+    expect(await page.evaluate(() => document.fonts.check("16px 'Inter Variable'")), 'Inter is what the page is set in').toBe(true);
   });
 
   test('a missing file is a plain 404, not the app page', async ({ request }) => {

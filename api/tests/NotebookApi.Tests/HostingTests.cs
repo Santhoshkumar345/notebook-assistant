@@ -27,6 +27,9 @@ public sealed class HostingTests : IClassFixture<ApiFactory>, IDisposable
         File.WriteAllText(Path.Combine(WebRoot, "index.html"), "<!doctype html><title>the app</title><script src=\"main-ABCD1234.js\"></script>");
         File.WriteAllText(Path.Combine(WebRoot, "main-ABCD1234.js"), "console.log('app');");
         File.WriteAllText(Path.Combine(WebRoot, "styles.css"), "body{}");
+        File.WriteAllText(Path.Combine(WebRoot, "theme-init.js"), "// kept under its own name\n");
+        Directory.CreateDirectory(Path.Combine(WebRoot, "media"));
+        File.WriteAllBytes(Path.Combine(WebRoot, "media", "inter-latin-wght-normal-NRMW37G5.woff2"), [0x77, 0x4F, 0x46, 0x32]);
         File.WriteAllText(Path.Combine(_root, "secret.txt"), "not for the web");
     }
 
@@ -121,6 +124,29 @@ public sealed class HostingTests : IClassFixture<ApiFactory>, IDisposable
         Assert.Equal(HttpStatusCode.OK, hashed.StatusCode);
         Assert.Equal("public, max-age=31536000, immutable", hashed.Headers.CacheControl?.ToString());
         Assert.Equal("no-cache", plain.Headers.CacheControl?.ToString());
+    }
+
+    [Fact]
+    public async Task A_content_named_font_is_cached_for_good_and_is_served_as_a_font()
+    {
+        using var spa = WithSpa();
+
+        var font = await spa.CreateClient().GetAsync("/media/inter-latin-wght-normal-NRMW37G5.woff2");
+
+        Assert.Equal(HttpStatusCode.OK, font.StatusCode);
+        Assert.Equal("public, max-age=31536000, immutable", font.Headers.CacheControl?.ToString());
+        Assert.Equal("font/woff2", font.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task A_script_kept_under_its_own_name_is_always_re_checked_because_a_changed_one_would_otherwise_never_be_noticed()
+    {
+        using var spa = WithSpa();
+
+        var response = await spa.CreateClient().GetAsync("/theme-init.js");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
     }
 
     [Fact]

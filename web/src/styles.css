@@ -1,8 +1,16 @@
+/* The typefaces are installed with the app (npm packages), not fetched from a font service: the content-security policy allows fonts only from this
+   origin, and nothing about reading these pages should depend on a third party being up. Inter for text, JetBrains Mono for ids and code. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
 /* Shared look: colours as tokens, redefined for dark mode, so components never hard-code a colour.
    Every text/background pair below was checked against WCAG AA (4.5:1) in both schemes; the end-to-end accessibility scan keeps it that way.
    Decoration (glows, gradients, shadows) is never what carries meaning or the contrast of any text. */
 :root {
   color-scheme: light dark;
+
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
   --bg: #f3f4fb;
   --surface: #ffffff;
@@ -42,8 +50,9 @@
   --shadow-brand: 0 6px 16px rgba(79, 70, 229, 0.32);
 }
 
+/* Dark, in two places that must stay identical: when the device asks for it and nothing was chosen, and when dark was chosen explicitly. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0e1020;
     --surface: #171a30;
     --surface-2: #1d2140;
@@ -75,6 +84,45 @@
   }
 }
 
+:root[data-theme='dark'] {
+  --bg: #0e1020;
+  --surface: #171a30;
+  --surface-2: #1d2140;
+  --text: #e8eafa;
+  --muted: #a4abc8;
+  --border: #2b3055;
+  --border-strong: #6a73a6;
+  --accent: #a5b4fc;
+  --accent-soft: #252b5a;
+  --accent-text: #ffffff;
+  --focus: #a5b4fc;
+  --danger: #f2837a;
+  --on-danger: #2b0b08;
+  --ok-bg: #16382a;
+  --ok-fg: #8fdca8;
+  --warn-bg: #3f3109;
+  --warn-fg: #f1cf84;
+  --bad-bg: #4a1f1b;
+  --bad-fg: #f5aaa3;
+  --info-bg: #1d2a55;
+  --info-fg: #b4c3f7;
+
+  --glow-1: rgba(99, 102, 241, 0.22);
+  --glow-2: rgba(168, 85, 247, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 44px rgba(0, 0, 0, 0.55);
+  --shadow-brand: 0 6px 18px rgba(79, 70, 229, 0.45);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -93,7 +141,8 @@ body {
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 16px/1.55 system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto, sans-serif;
+  font: 16px/1.6 var(--font-sans);
+  font-feature-settings: 'cv11', 'ss03'; /* Inter's single-storey a and rounder quotes: friendlier at body sizes */
   -webkit-font-smoothing: antialiased;
 }
 
@@ -105,17 +154,25 @@ body {
 h1 {
   font-size: 1.65rem;
   line-height: 1.2;
-  font-weight: 750;
-  letter-spacing: -0.02em;
+  font-weight: 720;
+  letter-spacing: -0.025em;
 }
 
 h2 {
-  letter-spacing: -0.01em;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+}
+
+/* Form controls do not inherit the page's font by default. */
+button,
+input,
+textarea {
+  font-family: inherit;
 }
 
 code {
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
   overflow-wrap: anywhere;
 }
 

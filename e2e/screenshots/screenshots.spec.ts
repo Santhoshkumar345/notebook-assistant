@@ -39,7 +39,7 @@ test('regenerate the screenshots', async ({ page }) => {
 
   await register(page, newAccount('garden'));
   await uploadDocument(page, 'garden-notes.md', NOTES);
-  await expect(page.getByRole('row', { name: /garden-notes\.md/ })).toContainText('Indexed');
+  await expect(page.getByRole('row', { name: /garden-notes\.md/ })).toContainText('Indexed', { timeout: 40_000 }); // the first upload after start-up loads the embedding model
   await page.screenshot({ path: `${out}/documents.png` });
 
   await openChat(page);
@@ -53,10 +53,13 @@ test('regenerate the screenshots', async ({ page }) => {
   await expect(page.getByRole('article', { name: 'Needs one more detail' })).toBeVisible({ timeout: 90_000 });
   await page.screenshot({ path: `${out}/chat-clarify.png` });
 
-  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('radio', { name: 'Dark' }).check({ force: true }); // the toggle in the top bar, not the device setting
   await page.screenshot({ path: `${out}/chat-dark.png` });
+  await page.getByRole('radio', { name: 'System' }).check({ force: true });
 
-  await page.emulateMedia({ colorScheme: 'light' });
   await page.setViewportSize({ width: 390, height: 780 });
   await page.screenshot({ path: `${out}/chat-phone.png` });
+  await page.goto('/documents');
+  await expect(page.getByRole('row', { name: /garden-notes\.md/ })).toContainText('Indexed', { timeout: 40_000 });
+  await page.screenshot({ path: `${out}/documents-phone.png` });
 });

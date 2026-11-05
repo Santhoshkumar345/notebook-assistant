@@ -3,10 +3,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthStore } from './auth/auth-store';
 import { HealthBadge } from './shell/health-badge';
+import { ThemeToggle } from './shell/theme-toggle';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, HealthBadge],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, HealthBadge, ThemeToggle],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

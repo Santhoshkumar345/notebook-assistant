@@ -11,11 +11,11 @@ A portfolio project: an Angular app and an ASP.NET Core API in front of a Python
 | An answer, with the passages it cites. Real model output. | Documents are stored here and indexed for search. |
 
 <details>
-<summary>More screenshots: a clarifying question, dark mode, phone width, sign-in</summary>
+<summary>More screenshots: a clarifying question, dark mode (chosen with the toggle in the top bar), phone width, sign-in</summary>
 
-| | | |
-|---|---|---|
-| ![A clarifying question](docs/screenshots/chat-clarify.png) | ![Dark mode](docs/screenshots/chat-dark.png) | ![Phone width](docs/screenshots/chat-phone.png) |
+| | | | |
+|---|---|---|---|
+| ![A clarifying question](docs/screenshots/chat-clarify.png) | ![Dark mode](docs/screenshots/chat-dark.png) | ![Phone width](docs/screenshots/chat-phone.png) | ![Documents on a phone](docs/screenshots/documents-phone.png) |
 
 ![Sign in](docs/screenshots/sign-in.png)
 
@@ -90,10 +90,10 @@ Open http://localhost:4200, create an account, upload a Markdown file, and ask a
 | Layer | Command | Tests | What it covers |
 |---|---|---|---|
 | AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 250 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit, tracing (and that it never records text), the output guard, the evaluation framework |
-| API | `cd api && dotnet test` | 225 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks |
-| Web | `cd web && npm test` | 266 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
-| End to end | `cd e2e && npm install && npm test` | 28 | the real stack in a real browser, two users side by side, failure and retry, and an accessibility scan of every screen in light, dark and phone width |
-| End to end, as deployed | `cd e2e && npm run test:production` | 38 | the same 28 against the **production build** served by the API, outside Development, behind a proxy that ends TLS, plus 10 about headers, caching, cookies and the policy |
+| API | `cd api && dotnet test` | 227 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks |
+| Web | `cd web && npm test` | 284 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
+| End to end | `cd e2e && npm install && npm test` | 38 | the real stack in a real browser, two users side by side, failure and retry, an accessibility scan of every screen in light, dark and phone width, the theme toggle, and every page at five widths from 320 to 1440 px |
+| End to end, as deployed | `cd e2e && npm run test:production` | 49 | the same 38 against the **production build** served by the API, outside Development, behind a proxy that ends TLS, plus 10 about headers, caching, cookies and the policy |
 
 The end-to-end tests run on ports of their own and need no Gemini key: the language model is a deterministic stand-in and everything else is real ([e2e/README.md](e2e/README.md)).
 Most of the security-relevant tests were written test-first and then checked by *breaking the code on purpose* to confirm a test fails; the evidence is recorded per step in

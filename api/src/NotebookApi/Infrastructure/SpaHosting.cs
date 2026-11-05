@@ -8,8 +8,9 @@ namespace NotebookApi.Infrastructure;
 /// </summary>
 public static partial class SpaHosting
 {
-    // Angular names its scripts and styles after their content (main-J5K3L2M1.js), so a changed file always has a new name and may be cached for good.
-    [GeneratedRegex(@"-[A-Z0-9]{8}\.(js|css)$", RegexOptions.IgnoreCase)]
+    // Angular names its scripts, styles and fonts after their content (main-J5K3L2M1.js, inter-latin-wght-normal-NRMW37G5.woff2), so a changed file always has a new name
+    // and may be cached for good. A file kept under its own name (theme-init.js, favicon.svg) is not content-named and is always re-checked.
+    [GeneratedRegex(@"-[A-Z0-9]{8}\.(js|css|woff2)$", RegexOptions.IgnoreCase)]
     private static partial Regex ContentHashed();
 
     /// <summary>The built app's files. Early in the pipeline: they need no sign-in, and a script or stylesheet should never be refused for lack of one.</summary>

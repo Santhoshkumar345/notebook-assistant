@@ -96,6 +96,37 @@ nav a.active {
   color: var(--accent);
 }
 
+/* On a phone the bar has to leave room for the page: the logo stands for the name, the signed-in address stays for screen readers (and in the tooltip),
+   and what is left wraps onto at most one more row. Hidden visually, never removed. */
+@media (max-width: 29.99rem) {
+  .topbar {
+    gap: 0.4rem 0.6rem;
+    padding: 0.5rem var(--gutter);
+  }
+
+  .brand-name,
+  .who {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  nav {
+    flex: 0 1 auto;
+  }
+
+  nav a {
+    padding: 0.35rem 0.7rem;
+  }
+
+  app-theme-toggle {
+    margin-left: auto;
+  }
+}
+
 main {
   max-width: 64rem;
   margin: 0 auto;
@@ -104,4 +135,10 @@ main {
 
 main:focus {
   outline: none;
+}
+
+@media (min-width: 90rem) {
+  main {
+    max-width: 76rem;
+  }
 }

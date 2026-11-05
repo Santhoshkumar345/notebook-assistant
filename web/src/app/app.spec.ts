@@ -51,6 +51,14 @@ describe('App header', () => {
     expect(Array.from(root().querySelectorAll('button')).some((b) => b.textContent?.trim() === 'Sign out')).toBe(true);
   });
 
+  it('offers the colour theme choice to everyone, signed in or not', async () => {
+    await show(null);
+    expect(root().querySelector('app-theme-toggle')).not.toBeNull();
+
+    await show({ id: '1', email: 'person@example.test' });
+    expect(root().querySelector('app-theme-toggle')).not.toBeNull();
+  });
+
   it('signs out when the button is pressed', async () => {
     await show({ id: '1', email: 'person@example.test' });
 

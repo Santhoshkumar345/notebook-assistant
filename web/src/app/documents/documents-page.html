@@ -99,9 +99,9 @@
             <tr>
               <th scope="col">Name</th>
               <th scope="col">Status</th>
-              <th scope="col" class="num">Chunks</th>
-              <th scope="col" class="num">Characters</th>
-              <th scope="col">Updated</th>
+              <th scope="col" class="num hide-narrow">Chunks</th>
+              <th scope="col" class="num hide-narrow">Characters</th>
+              <th scope="col" class="hide-narrow">Updated</th>
               <th scope="col"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
@@ -120,9 +120,9 @@
                     <small class="muted block">{{ failureHint(document) }}</small>
                   }
                 </td>
-                <td class="num">{{ document.chunks ?? '-' }}</td>
-                <td class="num">{{ document.chars | number }}</td>
-                <td>{{ document.updatedAt | date: 'medium' }}</td>
+                <td class="num hide-narrow">{{ document.chunks ?? '-' }}</td>
+                <td class="num hide-narrow">{{ document.chars | number }}</td>
+                <td class="hide-narrow">{{ document.updatedAt | date: 'medium' }}</td>
                 <td class="row-actions">
                   <button type="button" class="button small" (click)="store.reindex(document.name)" [disabled]="store.working() !== null" [attr.aria-label]="'Re-index ' + document.name">
                     Re-index

@@ -109,6 +109,35 @@ tbody tr:hover {
   margin-left: 0.4rem;
 }
 
+/* Below 40 rem the table would be wider than the screen: show what a person acts on (name, status, the two buttons) and leave the figures to wider screens. */
+@media (max-width: 39.99rem) {
+  .hide-narrow {
+    display: none;
+  }
+
+  th,
+  td {
+    padding: 0.7rem 0.6rem;
+  }
+
+  .row-actions {
+    white-space: normal;
+  }
+
+  .row-actions .button {
+    display: block;
+    width: 100%;
+  }
+
+  .row-actions .button + .button {
+    margin: 0.35rem 0 0;
+  }
+
+  .page-head .actions {
+    width: 100%;
+  }
+}
+
 .block {
   display: block;
   margin-top: 0.25rem;

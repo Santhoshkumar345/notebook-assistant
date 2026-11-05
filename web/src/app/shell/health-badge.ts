@@ -15,7 +15,7 @@ export const HEALTH_POLL_MS = 30_000;
   template: `
     <span class="health" [class]="'health ' + health().state" role="status">
       <span class="dot" aria-hidden="true"></span>
-      {{ label() }}
+      <span>{{ label().headline }}<span class="detail">{{ label().detail }}</span></span>
     </span>
   `,
   styles: `
@@ -29,6 +29,16 @@ export const HEALTH_POLL_MS = 30_000;
       background: var(--surface-2);
       font-size: 0.8125rem;
       color: var(--muted);
+    }
+    @media (max-width: 29.99rem) {
+      .detail {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
     }
     .dot {
       width: 0.6rem;
@@ -70,21 +80,22 @@ export class HealthBadge {
       .subscribe((health) => this.health.set(health));
   }
 
-  protected label(): string {
+  /** The headline is what matters at a glance; the detail follows it and is only visually dropped on a phone (still read out), to keep the top bar short. */
+  protected label(): { headline: string; detail: string } {
     const health = this.health();
     switch (health.state) {
       case 'checking':
-        return 'Checking…';
+        return { headline: 'Checking…', detail: '' };
       case 'ok': {
         // The document count is the signed-in person's own (from their documents), never a figure for the whole system.
-        if (!this.documents.loaded()) return 'Ready';
+        if (!this.documents.loaded()) return { headline: 'Ready', detail: '' };
         const count = this.documents.documents().filter((d) => d.status === 'Indexed').length;
-        return `Ready: ${count} ${count === 1 ? 'document' : 'documents'} searchable`;
+        return { headline: 'Ready', detail: `: ${count} ${count === 1 ? 'document' : 'documents'} searchable` };
       }
       case 'degraded':
-        return 'AI service unavailable';
+        return { headline: 'AI service unavailable', detail: '' };
       case 'down':
-        return 'API unreachable';
+        return { headline: 'API unreachable', detail: '' };
     }
   }
 }
