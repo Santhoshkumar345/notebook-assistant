@@ -34,6 +34,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from pydantic import BaseModel
 
 from app import generation, tracing
+from app.condense import Turn, condense_question
 from app.generation import GeneratedAnswer, RagResult, Status, answer_question, escape_untrusted, finish_name
 from app.service import Service
 from app.store import Hit, VectorStore
@@ -71,6 +72,7 @@ class Case:
     docs: tuple[tuple[str, str], ...] = ()  # documents added for this case only (an attack's poisoned document), removed afterwards
     markers: tuple[str, ...] = ()       # attack: text whose appearance in the answer means the attack worked
     honest: tuple[str, ...] = ()        # attack: what a correct answer contains anyway
+    history: tuple[tuple[str, str], ...] = ()  # (role, text) turns that came before: the question is a follow-up in a conversation
 
 
 @dataclass(frozen=True)
@@ -131,6 +133,7 @@ METRICS: dict[str, MetricSpec] = {
     "honest_answer": MetricSpec("higher", "the correct answer is in the answer despite the attack"),
     "retrieved_attack_doc": MetricSpec(None, "the poisoned document was among the retrieved chunks"),
     "guard_triggered": MetricSpec(None, "the output guard removed a link or image"),
+    "rewritten": MetricSpec(None, "a follow-up was rewritten into a standalone question before it was searched for"),
     "faithful": MetricSpec("higher", "a calibrated judge found every claim in the answer supported by its cited sources"),
 }
 
@@ -346,6 +349,7 @@ def _score(case: Case, hits: list[Hit], result: RagResult | None, guard_triggere
                 flags["honest_answer"] = all(norm(h) in answer for h in case.honest)
     if result is not None:
         flags["guard_triggered"] = guard_triggered
+        flags["rewritten"] = result.searched_for is not None
         if judge is not None and result.status is Status.answered:
             flags["faithful"] = judge(case.question, result.answer, result.sources)
     return flags, reciprocal_rank
@@ -358,8 +362,11 @@ def _percentile(values: list[float], fraction: float) -> float | None:
     return round(ordered[min(len(ordered) - 1, math.ceil(fraction * len(ordered)) - 1)], 1)
 
 
-def run_suite(suite: Suite, *, client: CachingClient | None, judge: LlmJudge | None = None, pause_s: float = 0.0, progress: Callable[[str], None] | None = None) -> Report:
-    """Run every case through the real service and score it. `client=None` runs retrieval only, with no model at all."""
+def run_suite(
+    suite: Suite, *, client: CachingClient | None, judge: LlmJudge | None = None, pause_s: float = 0.0, progress: Callable[[str], None] | None = None, condense: bool = True,
+) -> Report:
+    """Run every case through the real service and score it. `client=None` runs retrieval only, with no model at all (and so no rewriting of follow-ups:
+    the question is searched for as typed). `condense=False` switches the rewrite off while still answering: the baseline it is measured against."""
     suite.validate()
     memory = InMemorySpanExporter()
     provider = TracerProvider()
@@ -369,7 +376,8 @@ def run_suite(suite: Suite, *, client: CachingClient | None, judge: LlmJudge | N
     store = VectorStore(collection=f"eval{uuid.uuid4().hex}")
     try:
         answerer = (lambda question, hits: answer_question(question, hits, client)) if client is not None else None
-        service = Service(store, answerer=answerer) if answerer else Service(store)
+        condenser = (lambda question, turns: condense_question(question, turns, client)) if condense else (lambda question, turns: question)
+        service = Service(store, answerer=answerer, condenser=condenser) if answerer else Service(store)
         for name, text in suite.corpus.items():
             service.ingest(name, text)
 
@@ -385,7 +393,7 @@ def run_suite(suite: Suite, *, client: CachingClient | None, judge: LlmJudge | N
                 if client is None:
                     hits, result = service.retrieve(case.question, suite.k), None
                 else:
-                    hits, result = service.ask_with_context(case.question, suite.k)
+                    hits, result = service.ask_with_context(case.question, suite.k, [Turn(role, text) for role, text in case.history])
                 spans = memory.get_finished_spans()
                 llm = [s for s in spans if s.name.startswith("llm.")]
                 guard = any("guardrail.links_removed" in s.attributes or "guardrail.images_removed" in s.attributes for s in llm)
@@ -422,7 +430,7 @@ def run_suite(suite: Suite, *, client: CachingClient | None, judge: LlmJudge | N
         usage = {**totals, "latency_ms_p50": _percentile(live_latencies, 0.5), "latency_ms_p95": _percentile(live_latencies, 0.95), "latency_measured_on": len(live_latencies)}
         meta = {
             "suite": suite.name, "fingerprint": suite.fingerprint(), "created": datetime.now(timezone.utc).isoformat(), "git": _git(), "model": generation.MODEL,
-            "k": suite.k, "n_cases": len(suite.cases), "mode": "generation" if client is not None else "retrieval-only", "judge": judge is not None,
+            "k": suite.k, "n_cases": len(suite.cases), "mode": "generation" if client is not None else "retrieval-only", "judge": judge is not None, "condense": condense,
             "guard": generation.sanitize_answer.__module__ == "app.guardrails",  # False when something has replaced the real guard (run.py --no-guard)
         }
         return Report(meta, metrics, usage, records, by_tag)
@@ -482,6 +490,8 @@ def compare(base: Report, now: Report, tolerance: float = 0.10) -> Comparison:
         return Comparison("incomparable", f"the dataset changed (baseline {base.meta.get('fingerprint')}, now {now.meta.get('fingerprint')}): its scores are not comparable", [], [])
     if base.meta.get("guard", True) != now.meta.get("guard", True):
         return Comparison("incomparable", "the output guard was on in one run and off in the other", [], [])
+    if base.meta.get("condense", True) != now.meta.get("condense", True):
+        return Comparison("incomparable", "follow-up questions were rewritten in one run and not in the other", [], [])
 
     partial = now.meta.get("mode") == "retrieval-only"
     rows: list[Row] = []

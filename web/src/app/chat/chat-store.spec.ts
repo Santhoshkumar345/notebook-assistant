@@ -9,10 +9,10 @@ import { ChatStore } from './chat-store';
 const AT = '2026-10-31T09:00:00+00:00';
 const FROM_API = { 'X-Request-ID': 'req-1' };
 
-const user = (id: number, text: string): MessageOut => ({ id, role: 'user', text, status: null, action: null, sources: [], createdAt: AT });
-const assistant = (id: number, status: AnswerStatus, text: string): MessageOut => ({ id, role: 'assistant', text, status, action: 'retrieve', sources: [], createdAt: AT });
+const user = (id: number, text: string): MessageOut => ({ id, role: 'user', text, status: null, action: null, sources: [], searchedFor: null, createdAt: AT });
+const assistant = (id: number, status: AnswerStatus, text: string): MessageOut => ({ id, role: 'assistant', text, status, action: 'retrieve', sources: [], searchedFor: null, createdAt: AT });
 const conversation = (id: string, messages: MessageOut[]): ConversationOut => ({ id, title: 'A title', createdAt: AT, updatedAt: AT, messages });
-const reply = (id: string, status: AnswerStatus = 'answered'): AskResponse => ({ conversationId: id, messageId: 2, status, answer: 'x', sources: [], action: 'retrieve', trace: [] });
+const reply = (id: string, status: AnswerStatus = 'answered'): AskResponse => ({ conversationId: id, messageId: 2, status, answer: 'x', sources: [], action: 'retrieve', trace: [], searchedFor: null });
 const summary = (id: string) => ({ id, title: 'A title', messages: 2, createdAt: AT, updatedAt: AT });
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve));

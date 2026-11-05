@@ -124,7 +124,7 @@ describe('ApiClient', () => {
       const result = firstValueFrom(client.ask({ question: 'relative dates', mode: 'agent', conversationId: 'c-1', answersClarification: true }));
       const request = http.expectOne({ method: 'POST', url: '/api/ask' });
       expect(request.request.body).toEqual({ question: 'relative dates', mode: 'agent', conversationId: 'c-1', answersClarification: true });
-      request.flush({ conversationId: 'c-1', messageId: 4, status: 'answered', answer: 'x', sources: [], action: 'retrieve', trace: [] });
+      request.flush({ conversationId: 'c-1', messageId: 4, status: 'answered', answer: 'x', sources: [], action: 'retrieve', trace: [], searchedFor: null });
       expect((await result).status).toBe('answered');
     });
 

@@ -23,6 +23,8 @@ POISON = (
 CORPUS = {"widgets.md": WIDGETS, "gadgets.md": GADGETS}
 
 A_INSTALL = fw.Case("install", "How do I install the widget?", "answerable", gold=("pip install widget",), tags=("how-to",))
+CONVERSATION = (("user", "Tell me about the widget."), ("assistant", "It installs with pip and handles batches."))
+FOLLOW_UP = fw.Case("follow-up", "And how many can it handle?", "answerable", gold=("256 items per batch",), tags=("pronoun",), history=CONVERSATION)
 A_BATCH = fw.Case("batch", "How many items per batch does the widget handle?", "answerable", gold=("256 items per batch",), tags=("numeric",))
 A_WARRANTY = fw.Case("warranty", "How long is the gadget warranty?", "answerable", gold=("18 months",), tags=("numeric",))
 U_PRICE = fw.Case("price", "What is the price of the gadget?", "unanswerable")
@@ -44,9 +46,17 @@ class ScriptedClient:
     def __init__(self, rules):
         self.rules = rules
         self.calls = []
+        self.condense_calls = []
+        self.condense_reply = lambda contents: contents.rsplit("New question:", 1)[1].strip()  # by default a rewrite changes nothing
         self.models = pytypes.SimpleNamespace(generate_content=self.generate_content)
 
     def generate_content(self, model, contents, config):
+        if contents.startswith("<history>"):  # a request to rewrite a follow-up, not to answer
+            self.condense_calls.append(contents)
+            return pytypes.SimpleNamespace(
+                text=self.condense_reply(contents), parsed=None, candidates=[pytypes.SimpleNamespace(finish_reason="STOP")],
+                usage_metadata=pytypes.SimpleNamespace(prompt_token_count=30, candidates_token_count=8, thoughts_token_count=None),
+            )
         self.calls.append(contents)
         question = contents.rsplit("Question:", 1)[1].strip()
         sources = {int(m.group(1)): m.group(3) for m in re.finditer(r"\[(\d+)\] \(([^)]*)\)\n(.*?)(?=\n\n\[\d+\] \(|\n</sources>)", contents, re.S)}
@@ -71,8 +81,10 @@ GOOD_RULES = [
 ]
 
 
-def run(cases, rules=GOOD_RULES, k=4, **options):
+def run(cases, rules=GOOD_RULES, k=4, condense_reply=None, **options):
     client = ScriptedClient(rules)
+    if condense_reply:
+        client.condense_reply = condense_reply
     report = fw.run_suite(suite(*cases, k=k), client=fw.CachingClient(client, None), **options)
     return report, client
 
@@ -228,6 +240,83 @@ def test_results_are_broken_down_by_tag():
 
     by_tag = report.by_tag["cites_gold"]
     assert (by_tag["numeric"].successes, by_tag["numeric"].n) == (2, 2) and by_tag["how-to"].n == 1
+
+
+# ----------------------------------------------------------------- follow-up questions
+
+def widget_rewrite(contents):
+    return "How many items per batch does the widget handle?" if "And how many can it handle?" in contents else contents.rsplit("New question:", 1)[1].strip()
+
+
+def test_the_conversation_a_case_carries_is_part_of_the_dataset():
+    base = suite(FOLLOW_UP).fingerprint()
+    other = fw.Case("follow-up", FOLLOW_UP.question, "answerable", gold=FOLLOW_UP.gold, tags=FOLLOW_UP.tags, history=(("user", "Tell me about the gadget."),))
+
+    assert suite(other).fingerprint() != base
+    assert suite(fw.Case("follow-up", FOLLOW_UP.question, "answerable", gold=FOLLOW_UP.gold, tags=FOLLOW_UP.tags)).fingerprint() != base
+
+
+def test_a_follow_up_is_rewritten_before_it_is_searched_for_and_the_report_says_so():
+    report, client = run([FOLLOW_UP], condense_reply=widget_rewrite)
+
+    flags = case(report, "follow-up")["flags"]
+    assert flags["retrieval_hit"] and flags["cites_gold"] and flags["rewritten"] is True
+    assert len(client.condense_calls) == 1 and "Tell me about the widget." in client.condense_calls[0]
+    assert "How many items per batch" in client.calls[0]  # the answering model was asked the standalone question, not "and how many can it handle?"
+
+
+def test_the_same_follow_up_without_the_rewrite_is_the_baseline_the_rewrite_is_measured_against():
+    # with the question as typed there is nothing to say which widget or what "it" handles, so the answer is not found
+    report, client = run([FOLLOW_UP], condense=False)
+
+    assert client.condense_calls == [] and report.meta["condense"] is False
+    assert case(report, "follow-up")["flags"]["rewritten"] is False
+    assert not case(report, "follow-up")["flags"]["retrieval_hit"] or not case(report, "follow-up")["flags"]["cites_gold"]
+
+
+def test_a_question_that_was_already_standalone_is_left_alone_even_after_a_conversation():
+    standalone = fw.Case("standalone", "How long is the gadget warranty?", "answerable", gold=("18 months",), history=CONVERSATION)
+
+    report, _ = run([standalone])  # the scripted rewrite returns the question unchanged
+
+    assert case(report, "standalone")["flags"]["rewritten"] is False and case(report, "standalone")["flags"]["cites_gold"]
+
+
+def test_a_first_question_costs_no_rewrite_call():
+    _, client = run([A_INSTALL])
+    assert client.condense_calls == []
+
+
+def test_retrieval_only_runs_use_the_question_as_typed_because_a_rewrite_needs_a_model():
+    report = fw.run_suite(suite(FOLLOW_UP), client=None)
+
+    assert report.meta["mode"] == "retrieval-only" and "rewritten" not in case(report, "follow-up")["flags"]
+
+
+def test_the_rewrite_calls_are_cached_like_every_other_model_call(tmp_path):
+    cache = tmp_path / "cache.jsonl"
+    first = ScriptedClient(GOOD_RULES)
+    first.condense_reply = widget_rewrite
+    fw.run_suite(suite(FOLLOW_UP), client=fw.CachingClient(first, cache))
+
+    second = ScriptedClient([])
+    fw.run_suite(suite(FOLLOW_UP), client=fw.CachingClient(second, cache))
+
+    assert len(first.condense_calls) == 1 and second.condense_calls == [] and second.calls == []
+
+
+def test_a_run_with_the_rewrite_cannot_be_compared_with_one_without():
+    with_rewrite = make_report(cites_gold=(8, 10))
+    without = make_report(cites_gold=(8, 10))
+    with_rewrite.meta["condense"], without.meta["condense"] = True, False
+
+    verdict = fw.compare(with_rewrite, without)
+
+    assert verdict.status == "incomparable" and "rewritten" in verdict.reason
+
+
+def test_rewriting_is_reported_but_never_fails_a_run():
+    assert fw.METRICS["rewritten"].direction is None
 
 
 # ----------------------------------------------------------------- cost and the cache

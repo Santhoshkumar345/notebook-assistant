@@ -1,0 +1,799 @@
+{
+ "meta": {
+  "suite": "followup",
+  "fingerprint": "dd372c446c4b",
+  "created": "2026-11-05T16:51:06.071436+00:00",
+  "git": {
+   "sha": "e3601a4",
+   "dirty": true
+  },
+  "model": "gemini-3.5-flash-lite",
+  "k": 4,
+  "n_cases": 15,
+  "mode": "generation",
+  "judge": false,
+  "condense": true,
+  "guard": true
+ },
+ "metrics": {
+  "retrieval_hit": {
+   "value": 0.9333333333333333,
+   "n": 15,
+   "successes": 14,
+   "ci": [
+    0.7018292244757601,
+    0.9881334113938051
+   ],
+   "direction": "higher"
+  },
+  "mrr": {
+   "value": 0.8222222222222223,
+   "n": 15,
+   "successes": null,
+   "ci": null,
+   "direction": "higher"
+  },
+  "answered": {
+   "value": 0.8666666666666667,
+   "n": 15,
+   "successes": 13,
+   "ci": [
+    0.6211750079348376,
+    0.9626395301086407
+   ],
+   "direction": "higher"
+  },
+  "cites_gold": {
+   "value": 0.8666666666666667,
+   "n": 15,
+   "successes": 13,
+   "ci": [
+    0.6211750079348376,
+    0.9626395301086407
+   ],
+   "direction": "higher"
+  },
+  "generation_given_retrieval": {
+   "value": 0.9285714285714286,
+   "n": 14,
+   "successes": 13,
+   "ci": [
+    0.6853073044604219,
+    0.9872781138877085
+   ],
+   "direction": "higher"
+  },
+  "guard_triggered": {
+   "value": 0.0,
+   "n": 15,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.20388926630434784
+   ],
+   "direction": null
+  },
+  "rewritten": {
+   "value": 0.7333333333333333,
+   "n": 15,
+   "successes": 11,
+   "ci": [
+    0.4804911034231324,
+    0.8910272389681718
+   ],
+   "direction": null
+  }
+ },
+ "usage": {
+  "input_tokens": 15957,
+  "output_tokens": 994,
+  "live_calls": 26,
+  "cached_calls": 4,
+  "latency_ms_p50": 12307.8,
+  "latency_ms_p95": 56193.9,
+  "latency_measured_on": 11
+ },
+ "cases": [
+  {
+   "id": "followup-01",
+   "kind": "answerable",
+   "tags": [
+    "pronoun"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Recall saturated at 50 (the knee), meaning `ef_search >= 50` achieved a recall of 1.000.",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#1",
+    "week-06.md#3",
+    "week-07.md#0",
+    "week-07.md#2"
+   ],
+   "latency_ms": 8164.1,
+   "input_tokens": 1072,
+   "output_tokens": 72
+  },
+  {
+   "id": "followup-02",
+   "kind": "answerable",
+   "tags": [
+    "ellipsis"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "At ef_search=10, HNSW achieved a latency of 0.22 ms at a recall of 0.922.",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#1",
+    "week-07.md#0",
+    "week-07.md#2",
+    "week-07.md#3"
+   ],
+   "latency_ms": 34293.6,
+   "input_tokens": 1066,
+   "output_tokens": 71
+  },
+  {
+   "id": "followup-03",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "Calling collection.modify(ef_search=...) updated the reported configuration but did NOT change the actual behavior in chromadb 1.5.9 (the config reported 200, but the results matched 10).",
+   "cited": [
+    "week-07.md#1"
+   ],
+   "retrieved": [
+    "week-07.md#7",
+    "week-07.md#1",
+    "project-architecture.md#56",
+    "project-architecture.md#52"
+   ],
+   "latency_ms": 6090.1,
+   "input_tokens": 1020,
+   "output_tokens": 91
+  },
+  {
+   "id": "followup-04",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 0.5,
+   "status": "answered",
+   "answer": "In the experiment, 2500-character chunks had 50% coverage, whole heading sections had 81%, and 1000-character chunks had 88%.",
+   "cited": [
+    "week-07.md#5"
+   ],
+   "retrieved": [
+    "project-architecture.md#4",
+    "week-07.md#5",
+    "week-07.md#4",
+    "week-07.md#6"
+   ],
+   "latency_ms": 56193.9,
+   "input_tokens": 1141,
+   "output_tokens": 94
+  },
+  {
+   "id": "followup-05",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": false,
+    "cites_gold": false,
+    "generation_given_retrieval": false,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 0.3333333333333333,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-architecture.md#4",
+    "week-07.md#3",
+    "week-07.md#6",
+    "week-07.md#5"
+   ],
+   "latency_ms": 21156.1,
+   "input_tokens": 1156,
+   "output_tokens": 46
+  },
+  {
+   "id": "followup-06",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Silencing the tokenizer warning by setting model_max_length to 10**6 also disabled truncation inside encode(), which invalidated the first run and was exposed by a header showing a 1,000,000-token limit and a crash.",
+   "cited": [
+    "week-07.md#6"
+   ],
+   "retrieved": [
+    "week-07.md#6",
+    "project-architecture.md#4",
+    "week-07.md#5",
+    "week-06.md#3"
+   ],
+   "latency_ms": 2931.2,
+   "input_tokens": 1164,
+   "output_tokens": 93
+  },
+  {
+   "id": "followup-07",
+   "kind": "answerable",
+   "tags": [
+    "pronoun"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The project is pinned to the gemini-3.5-flash-lite model.",
+   "cited": [
+    "project-architecture.md#7",
+    "project-architecture.md#3"
+   ],
+   "retrieved": [
+    "project-architecture.md#7",
+    "project-architecture.md#3",
+    "week-05.md#1",
+    "week-04.md#9"
+   ],
+   "latency_ms": 15603.1,
+   "input_tokens": 1005,
+   "output_tokens": 59
+  },
+  {
+   "id": "followup-08",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The status is called uncited.",
+   "cited": [
+    "project-architecture.md#53"
+   ],
+   "retrieved": [
+    "project-architecture.md#53",
+    "project-architecture.md#49",
+    "project-architecture.md#54",
+    "project-architecture.md#35"
+   ],
+   "latency_ms": 12307.8,
+   "input_tokens": 1018,
+   "output_tokens": 50
+  },
+  {
+   "id": "followup-09",
+   "kind": "answerable",
+   "tags": [
+    "pronoun"
+   ],
+   "flags": {
+    "retrieval_hit": false,
+    "answered": false,
+    "cites_gold": false,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 0.0,
+   "status": "not_found",
+   "answer": "",
+   "cited": [],
+   "retrieved": [
+    "project-architecture.md#25",
+    "week-05.md#7",
+    "week-05.md#0",
+    "week-03.md#4"
+   ],
+   "latency_ms": 14396.6,
+   "input_tokens": 1028,
+   "output_tokens": 33
+  },
+  {
+   "id": "followup-10",
+   "kind": "answerable",
+   "tags": [
+    "reference"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "A sentinel string like 'Unknown' passes validation and is indistinguishable from real data, making it worse in a quieter way than a fabricated name.",
+   "cited": [
+    "week-05.md#6"
+   ],
+   "retrieved": [
+    "week-05.md#6",
+    "project-architecture.md#4",
+    "week-07.md#4",
+    "week-02.md#4"
+   ],
+   "latency_ms": 2600.7,
+   "input_tokens": 1091,
+   "output_tokens": 72
+  },
+  {
+   "id": "followup-11",
+   "kind": "answerable",
+   "tags": [
+    "pronoun"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": true
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "310 tokens on average",
+   "cited": [
+    "week-06.md#1"
+   ],
+   "retrieved": [
+    "week-06.md#1",
+    "project-architecture.md#8",
+    "week-06.md#2",
+    "week-06.md#0"
+   ],
+   "latency_ms": 2756.1,
+   "input_tokens": 1017,
+   "output_tokens": 51
+  },
+  {
+   "id": "followup-12",
+   "kind": "answerable",
+   "tags": [
+    "standalone"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "The project is pinned to the gemini-3.5-flash-lite model.",
+   "cited": [
+    "project-architecture.md#7",
+    "project-architecture.md#3"
+   ],
+   "retrieved": [
+    "project-architecture.md#7",
+    "project-architecture.md#8",
+    "project-architecture.md#3",
+    "project-architecture.md#52"
+   ],
+   "latency_ms": 17655.2,
+   "input_tokens": 1017,
+   "output_tokens": 60
+  },
+  {
+   "id": "followup-13",
+   "kind": "answerable",
+   "tags": [
+    "standalone"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Floating-point non-associativity across batched GPU execution and load balancing can cause the computed probabilities to shift between calls, making temperature=0 not reproducible.",
+   "cited": [
+    "week-05.md#1"
+   ],
+   "retrieved": [
+    "week-05.md#1",
+    "project-architecture.md#25",
+    "week-01.md#7",
+    "week-05.md#7"
+   ],
+   "latency_ms": 2348.0,
+   "input_tokens": 1076,
+   "output_tokens": 73
+  },
+  {
+   "id": "followup-14",
+   "kind": "answerable",
+   "tags": [
+    "standalone"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Writing 'Unknown' is worse because a sentinel string passes validation and is indistinguishable from real data.",
+   "cited": [
+    "week-05.md#6"
+   ],
+   "retrieved": [
+    "week-05.md#6",
+    "week-06.md#3",
+    "week-03.md#6",
+    "week-04.md#5"
+   ],
+   "latency_ms": 1705.2,
+   "input_tokens": 1037,
+   "output_tokens": 64
+  },
+  {
+   "id": "followup-15",
+   "kind": "answerable",
+   "tags": [
+    "standalone"
+   ],
+   "flags": {
+    "retrieval_hit": true,
+    "answered": true,
+    "cites_gold": true,
+    "generation_given_retrieval": true,
+    "guard_triggered": false,
+    "rewritten": false
+   },
+   "reciprocal_rank": 1.0,
+   "status": "answered",
+   "answer": "Real training uses adaptive optimizers (such as Adam) instead of one shared learning rate for every parameter.",
+   "cited": [
+    "week-03.md#2"
+   ],
+   "retrieved": [
+    "week-03.md#2",
+    "week-04.md#0",
+    "week-03.md#9",
+    "week-04.md#3"
+   ],
+   "latency_ms": 1234.9,
+   "input_tokens": 1049,
+   "output_tokens": 65
+  }
+ ],
+ "by_tag": {
+  "retrieval_hit": {
+   "ellipsis": {
+    "value": 1.0,
+    "n": 1,
+    "successes": 1,
+    "ci": [
+     0.20654329147389294,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "pronoun": {
+    "value": 0.75,
+    "n": 4,
+    "successes": 3,
+    "ci": [
+     0.3006360524426366,
+     0.9544139373553637
+    ],
+    "direction": "higher"
+   },
+   "reference": {
+    "value": 1.0,
+    "n": 6,
+    "successes": 6,
+    "ci": [
+     0.6096569663469354,
+     0.9999999999999999
+    ],
+    "direction": "higher"
+   },
+   "standalone": {
+    "value": 1.0,
+    "n": 4,
+    "successes": 4,
+    "ci": [
+     0.5100999795960008,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "answered": {
+   "ellipsis": {
+    "value": 1.0,
+    "n": 1,
+    "successes": 1,
+    "ci": [
+     0.20654329147389294,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "pronoun": {
+    "value": 0.75,
+    "n": 4,
+    "successes": 3,
+    "ci": [
+     0.3006360524426366,
+     0.9544139373553637
+    ],
+    "direction": "higher"
+   },
+   "reference": {
+    "value": 0.8333333333333334,
+    "n": 6,
+    "successes": 5,
+    "ci": [
+     0.43649056343635395,
+     0.9699474141282697
+    ],
+    "direction": "higher"
+   },
+   "standalone": {
+    "value": 1.0,
+    "n": 4,
+    "successes": 4,
+    "ci": [
+     0.5100999795960008,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "cites_gold": {
+   "ellipsis": {
+    "value": 1.0,
+    "n": 1,
+    "successes": 1,
+    "ci": [
+     0.20654329147389294,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "pronoun": {
+    "value": 0.75,
+    "n": 4,
+    "successes": 3,
+    "ci": [
+     0.3006360524426366,
+     0.9544139373553637
+    ],
+    "direction": "higher"
+   },
+   "reference": {
+    "value": 0.8333333333333334,
+    "n": 6,
+    "successes": 5,
+    "ci": [
+     0.43649056343635395,
+     0.9699474141282697
+    ],
+    "direction": "higher"
+   },
+   "standalone": {
+    "value": 1.0,
+    "n": 4,
+    "successes": 4,
+    "ci": [
+     0.5100999795960008,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "generation_given_retrieval": {
+   "ellipsis": {
+    "value": 1.0,
+    "n": 1,
+    "successes": 1,
+    "ci": [
+     0.20654329147389294,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "pronoun": {
+    "value": 1.0,
+    "n": 3,
+    "successes": 3,
+    "ci": [
+     0.43849391955098227,
+     1.0
+    ],
+    "direction": "higher"
+   },
+   "reference": {
+    "value": 0.8333333333333334,
+    "n": 6,
+    "successes": 5,
+    "ci": [
+     0.43649056343635395,
+     0.9699474141282697
+    ],
+    "direction": "higher"
+   },
+   "standalone": {
+    "value": 1.0,
+    "n": 4,
+    "successes": 4,
+    "ci": [
+     0.5100999795960008,
+     1.0
+    ],
+    "direction": "higher"
+   }
+  },
+  "guard_triggered": {
+   "ellipsis": {
+    "value": 0.0,
+    "n": 1,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.7934567085261071
+    ],
+    "direction": null
+   },
+   "pronoun": {
+    "value": 0.0,
+    "n": 4,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.48990002040399916
+    ],
+    "direction": null
+   },
+   "reference": {
+    "value": 0.0,
+    "n": 6,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.3903430336530645
+    ],
+    "direction": null
+   },
+   "standalone": {
+    "value": 0.0,
+    "n": 4,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.48990002040399916
+    ],
+    "direction": null
+   }
+  },
+  "rewritten": {
+   "ellipsis": {
+    "value": 1.0,
+    "n": 1,
+    "successes": 1,
+    "ci": [
+     0.20654329147389294,
+     1.0
+    ],
+    "direction": null
+   },
+   "pronoun": {
+    "value": 1.0,
+    "n": 4,
+    "successes": 4,
+    "ci": [
+     0.5100999795960008,
+     1.0
+    ],
+    "direction": null
+   },
+   "reference": {
+    "value": 1.0,
+    "n": 6,
+    "successes": 6,
+    "ci": [
+     0.6096569663469354,
+     0.9999999999999999
+    ],
+    "direction": null
+   },
+   "standalone": {
+    "value": 0.0,
+    "n": 4,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.48990002040399916
+    ],
+    "direction": null
+   }
+  }
+ }
+}

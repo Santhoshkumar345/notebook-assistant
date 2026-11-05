@@ -8,8 +8,8 @@ import { Composer } from './composer';
 
 const AT = '2026-10-31T09:00:00+00:00';
 const clarifying: MessageOut[] = [
-  { id: 1, role: 'user', text: 'How should that be handled?', status: null, action: null, sources: [], createdAt: AT },
-  { id: 2, role: 'assistant', text: 'Which one do you mean?', status: 'clarify', action: 'clarify', sources: [], createdAt: AT },
+  { id: 1, role: 'user', text: 'How should that be handled?', status: null, action: null, sources: [], searchedFor: null, createdAt: AT },
+  { id: 2, role: 'assistant', text: 'Which one do you mean?', status: 'clarify', action: 'clarify', sources: [], searchedFor: null, createdAt: AT },
 ];
 
 describe('Composer', () => {

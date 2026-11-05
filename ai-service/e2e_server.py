@@ -10,6 +10,7 @@ How the stand-in behaves, chosen by words in the question:
   "flaky"         the model is rate limited the first time this exact question is asked, and fine afterwards
   "slow"          takes four seconds to answer (so a test can press Stop)
   ends in "vague?" the agent asks a clarifying question instead of searching
+  starts with "and " in a conversation: a follow-up, rewritten into the last thing the person asked followed by the follow-up (see fake_condenser)
   anything else   an answer quoting the start of the top retrieved passage, and the question it was asked ("[asked: ...]"), which is how a test
                   sees both which tenant's document was retrieved and what text reached the service after a clarifying question
 
@@ -27,6 +28,7 @@ import uvicorn
 from google.genai import errors as genai_errors
 
 from app.agent import Action, AgentDeps, Route
+from app.condense import Turn
 from app.api import create_app
 from app.generation import RagResult, Status
 from app.service import Service
@@ -61,6 +63,15 @@ def fake_answerer(question: str, hits: list) -> RagResult:
     return RagResult(Status.answered, f"From {top.source}: {_opening(top.body)} [asked: {question}]", [top])
 
 
+def fake_condenser(question: str, history: list[Turn]) -> str:
+    """A follow-up (it starts with \"and \") becomes the last thing the person asked followed by the follow-up; anything else is left as typed, which is what a
+    real rewriter does with a question that already stands on its own. Joined the way the clarification flow joins questions, so a test can read it back."""
+    if not question.strip().lower().startswith("and "):
+        return question
+    last = next((turn.text for turn in reversed(history) if turn.role == "user"), None)
+    return f"{last} {question}" if last else question
+
+
 def fake_route(question: str, documents: list[str]) -> Route:
     lowered = question.strip().lower()
     if lowered.endswith("vague?"):
@@ -84,7 +95,7 @@ def fake_agent_deps(retrieve, store, answer) -> AgentDeps:
 
 def build_tenants(data_dir: str) -> Tenants:
     client = chromadb.PersistentClient(path=data_dir)
-    return Tenants(lambda tenant: Service(VectorStore(client=client, collection=f"tenant_{tenant}"), answerer=fake_answerer, agent_deps_factory=fake_agent_deps))
+    return Tenants(lambda tenant: Service(VectorStore(client=client, collection=f"tenant_{tenant}"), answerer=fake_answerer, agent_deps_factory=fake_agent_deps, condenser=fake_condenser))
 
 
 def main() -> None:

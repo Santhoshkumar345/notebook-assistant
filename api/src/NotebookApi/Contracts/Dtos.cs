@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using NotebookApi.Data;
 
 namespace NotebookApi.Contracts;
@@ -45,7 +46,10 @@ public sealed class AskIn
 public sealed record SourceOut(string Id, string Source, string Heading, string Snippet);
 
 /// <summary>The AI service's reply, as it sends it. For status "clarify" the answer field holds the clarifying question to put to the user.</summary>
-public sealed record AskOut(AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
+public sealed record AskOut(AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace, [property: JsonPropertyName("searched_for")] string? SearchedFor = null);
+
+/// <summary>One earlier turn of the conversation as the AI service takes it. Built here from this person's own saved history, never from a request.</summary>
+public sealed record HistoryTurn(string Role, string Text);
 
 public sealed record AiHealth(string Status);
 
@@ -67,11 +71,11 @@ public sealed record DocumentInfo(string Name, int Chars, int? Chunks, DocumentS
 public sealed record SyncResult(int Reindexed, IReadOnlyList<string> RemovedFromIndex);
 
 /// <summary>The AI service's answer, plus where it was saved.</summary>
-public sealed record AskResponse(Guid ConversationId, int MessageId, AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace);
+public sealed record AskResponse(Guid ConversationId, int MessageId, AnswerStatus Status, string Answer, IReadOnlyList<SourceOut> Sources, string Action, IReadOnlyList<string> Trace, string? SearchedFor);
 
 public sealed record ConversationSummary(Guid Id, string Title, int Messages, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
-public sealed record MessageOut(int Id, MessageRole Role, string Text, AnswerStatus? Status, string? Action, IReadOnlyList<SourceOut> Sources, DateTimeOffset CreatedAt);
+public sealed record MessageOut(int Id, MessageRole Role, string Text, AnswerStatus? Status, string? Action, IReadOnlyList<SourceOut> Sources, string? SearchedFor, DateTimeOffset CreatedAt);
 
 public sealed record ConversationOut(Guid Id, string Title, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<MessageOut> Messages);
 

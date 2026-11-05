@@ -14,7 +14,11 @@ public interface IAiServiceClient
     /// <summary>Returns false when the AI service has no such document.</summary>
     Task<bool> DeleteDocumentAsync(string name, CancellationToken ct);
 
-    Task<AskOut> AskAsync(AskIn request, CancellationToken ct);
+    /// <summary>
+    /// <paramref name="history"/> is the conversation so far, so a follow-up can be rewritten into a standalone question; null or empty for a first question,
+    /// in which case the property is not sent at all.
+    /// </summary>
+    Task<AskOut> AskAsync(AskIn request, IReadOnlyList<HistoryTurn>? history, CancellationToken ct);
 }
 
 /// <summary>
@@ -43,8 +47,13 @@ public sealed class AiServiceClient(HttpClient http, ILogger<AiServiceClient> lo
         return true;
     }
 
-    public Task<AskOut> AskAsync(AskIn request, CancellationToken ct) =>
-        SendAsync<AskOut>(HttpMethod.Post, "ask", JsonContent.Create(new { question = request.Question, k = request.K, mode = request.Mode }), ct);
+    public Task<AskOut> AskAsync(AskIn request, IReadOnlyList<HistoryTurn>? history, CancellationToken ct)
+    {
+        var body = new Dictionary<string, object> { ["question"] = request.Question, ["k"] = request.K, ["mode"] = request.Mode };
+        if (history is { Count: > 0 })
+            body["history"] = history.Select(t => new { role = t.Role, text = t.Text }).ToList();
+        return SendAsync<AskOut>(HttpMethod.Post, "ask", JsonContent.Create(body), ct);
+    }
 
     private async Task<T> SendAsync<T>(HttpMethod method, string path, HttpContent? content, CancellationToken ct)
     {

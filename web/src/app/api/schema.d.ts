@@ -950,6 +950,7 @@ export interface components {
             sources: components["schemas"]["SourceOut"][];
             action: string;
             trace: string[];
+            searchedFor: null | string;
         };
         ConversationOut: {
             /** Format: uuid */
@@ -1007,6 +1008,7 @@ export interface components {
             status: null | components["schemas"]["AnswerStatus"];
             action: null | string;
             sources: components["schemas"]["SourceOut"][];
+            searchedFor: null | string;
             /** Format: date-time */
             createdAt: string;
         };

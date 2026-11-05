@@ -69,6 +69,7 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock, IOpti
             Text = answer.Answer,
             Status = AnswerStatusWire.ToWire(answer.Status),
             Action = answer.Action,
+            SearchedFor = answer.SearchedFor,
             SourcesJson = JsonSerializer.Serialize(answer.Sources, Json),
             RequestId = requestId,
             CreatedAt = now,
@@ -85,7 +86,33 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock, IOpti
             return null; // the conversation was deleted between the lookup and the save (foreign key)
         }
 
-        return new AskResponse(conversation.Id, replied.Id, answer.Status, answer.Answer, answer.Sources, answer.Action, answer.Trace);
+        return new AskResponse(conversation.Id, replied.Id, answer.Status, answer.Answer, answer.Sources, answer.Action, answer.Trace, answer.SearchedFor);
+    }
+
+    /// <summary>
+    /// The latest turns of this person's conversation, oldest first, in the form the AI service takes (see <see cref="Limits.MaxHistoryTurns"/>), or null when there
+    /// are none. It starts with something the person said, never with half an exchange. An earlier answer that found nothing is described as such.
+    /// </summary>
+    public async Task<IReadOnlyList<HistoryTurn>?> RecentTurnsAsync(Guid conversationId, CancellationToken ct)
+    {
+        var latest = await db.Messages.AsNoTracking()
+            .Where(m => m.ConversationId == conversationId).OrderByDescending(m => m.Id).Take(Limits.MaxHistoryTurns)
+            .Select(m => new { m.Role, m.Text, m.Status })
+            .ToListAsync(ct);
+        latest.Reverse();
+        while (latest.Count > 0 && latest[0].Role != MessageRole.User)
+            latest.RemoveAt(0);
+
+        var turns = latest.Select(m => m.Role == MessageRole.User
+            ? new HistoryTurn("user", Clip(m.Text))
+            : new HistoryTurn("assistant", m.Status is "answered" or "clarify" && !string.IsNullOrWhiteSpace(m.Text) ? Clip(m.Text) : Limits.NoAnswerText)).ToList();
+        return turns.Count == 0 ? null : turns;
+    }
+
+    private static string Clip(string text)
+    {
+        var tidy = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return tidy.Length <= Limits.MaxHistoryTurnChars ? tidy : tidy[..(Limits.MaxHistoryTurnChars - 1)] + "…";
     }
 
     /// <summary>
@@ -142,7 +169,7 @@ public sealed class ConversationService(NotebookDb db, TimeProvider clock, IOpti
 
     private static MessageOut ToOut(ChatMessage m) =>
         new(m.Id, m.Role, m.Text, AnswerStatusWire.Parse(m.Status), m.Action,
-            m.SourcesJson is null ? [] : JsonSerializer.Deserialize<List<SourceOut>>(m.SourcesJson, Json) ?? [], m.CreatedAt);
+            m.SourcesJson is null ? [] : JsonSerializer.Deserialize<List<SourceOut>>(m.SourcesJson, Json) ?? [], m.SearchedFor, m.CreatedAt);
 }
 
 public enum ClarificationOutcome { Composed, NoSuchConversation, NotAwaitingAnswer, TooLong }

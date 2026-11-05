@@ -55,6 +55,9 @@
           <p class="text">{{ m.text }}</p>
         }
       }
+      @if (m.searchedFor) {
+        <p class="searched"><span class="label">Searched for:</span>&ngsp;<q>{{ m.searchedFor }}</q></p>
+      }
     </div>
   </article>
 }

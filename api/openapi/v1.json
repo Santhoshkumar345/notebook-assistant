@@ -933,7 +933,8 @@
           "answer",
           "sources",
           "action",
-          "trace"
+          "trace",
+          "searchedFor"
         ],
         "type": "object",
         "properties": {
@@ -965,6 +966,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "searchedFor": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1151,6 +1158,7 @@
           "status",
           "action",
           "sources",
+          "searchedFor",
           "createdAt"
         ],
         "type": "object",
@@ -1186,6 +1194,12 @@
             "items": {
               "$ref": "#/components/schemas/SourceOut"
             }
+          },
+          "searchedFor": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "createdAt": {
             "type": "string",

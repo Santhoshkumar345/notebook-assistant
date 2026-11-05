@@ -14,8 +14,8 @@ good real answers are is measured by the evaluation harnesses in `ai-service/eva
 ```bash
 cd e2e
 npm install
-npm test            # 38 tests, about two minutes (the first run also builds the .NET API)
-npm run test:production   # 49 tests against the production build, see below
+npm test            # 41 tests, about two minutes (the first run also builds the .NET API)
+npm run test:production   # 52 tests against the production build, see below
 ```
 
 - It uses a browser already on the machine: Edge by default, `E2E_BROWSER=chrome` for Chrome. Nothing is downloaded.
@@ -46,6 +46,7 @@ cookies), a real host, Linux.
 | `documents-and-chat.spec.ts` | Upload, replace-with-confirmation, browser-side file checks, delete; an answer from your own document with its source passage; history survives a reload and a sign-out; "not found" and "no supported answer" are explained |
 | `isolation.spec.ts` | Two people in two browsers: same file name, different documents, each answer comes from the asker's own; one cannot read, open, write into or delete the other's conversation (through the page and straight at the API); a request without the CSRF token is refused |
 | `resilience.spec.ts` | A rate-limited model shows the error, the request id and the unanswered question, and Retry works; Stop restores the text and saves nothing; the answer to a clarifying question reaches the service together with the original question; "Ask something else instead" does not |
+| `followup.spec.ts` | A follow-up is rewritten from the conversation (the stand-in model joins it to the last question), the page says what was searched for, also after a reload; a question that stands on its own is not rewritten; a new conversation does not inherit an old one's context |
 | `theme.spec.ts` | The System / Light / Dark choice beats the device both ways, "System" follows the device, the choice is remembered across reloads and sign-out, it is applied with the app's own script blocked (no flash), and the accessibility scan passes when the choice and the device disagree |
 | `responsive.spec.ts` | Every page at 320, 375, 768, 1024 and 1440 px: no sideways scrolling, nothing pushed off the edge, and a phone top bar short enough to leave room for the page |
 | `accessibility.spec.ts` | An automated axe-core scan (WCAG 2.2 AA and best practices) of every screen and state, in light, dark and phone width |

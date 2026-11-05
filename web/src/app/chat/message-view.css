@@ -213,3 +213,18 @@ blockquote {
   font-size: 0.9rem;
   color: var(--muted);
 }
+
+/* What a follow-up was rewritten into before it was searched for: small, after the answer, in the card's own colours so it never drops below the AA ratio. */
+.searched {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.searched .label {
+  font-weight: 650;
+}
+
+.searched q {
+  font-style: italic;
+}

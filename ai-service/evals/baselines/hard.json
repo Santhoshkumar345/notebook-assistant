@@ -1,10 +1,10 @@
 {
  "meta": {
   "suite": "hard",
-  "fingerprint": "9d18f5ff1e7c",
-  "created": "2026-11-01T07:35:43.490495+00:00",
+  "fingerprint": "1a710e9412b0",
+  "created": "2026-11-05T16:53:45.154656+00:00",
   "git": {
-   "sha": "0ae2146",
+   "sha": "e3601a4",
    "dirty": true
   },
   "model": "gemini-3.5-flash-lite",
@@ -12,6 +12,7 @@
   "n_cases": 26,
   "mode": "generation",
   "judge": false,
+  "condense": true,
   "guard": true
  },
  "metrics": {
@@ -81,16 +82,26 @@
     0.12873304380462175
    ],
    "direction": null
+  },
+  "rewritten": {
+   "value": 0.0,
+   "n": 26,
+   "successes": 0,
+   "ci": [
+    0.0,
+    0.12873304380462175
+   ],
+   "direction": null
   }
  },
  "usage": {
   "input_tokens": 22242,
   "output_tokens": 1256,
-  "live_calls": 26,
-  "cached_calls": 0,
-  "latency_ms_p50": 1040.1,
-  "latency_ms_p95": 1527.0,
-  "latency_measured_on": 26
+  "live_calls": 0,
+  "cached_calls": 26,
+  "latency_ms_p50": null,
+  "latency_ms_p95": null,
+  "latency_measured_on": 0
  },
  "cases": [
   {
@@ -104,7 +115,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.3333333333333333,
    "status": "answered",
@@ -118,7 +130,7 @@
     "week-07.md#1",
     "week-03.md#7"
    ],
-   "latency_ms": 1116.0,
+   "latency_ms": 39.5,
    "input_tokens": 795,
    "output_tokens": 57
   },
@@ -133,7 +145,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -147,7 +160,7 @@
     "week-07.md#0",
     "week-03.md#7"
    ],
-   "latency_ms": 1017.4,
+   "latency_ms": 15.0,
    "input_tokens": 794,
    "output_tokens": 93
   },
@@ -162,7 +175,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.5,
    "status": "answered",
@@ -176,7 +190,7 @@
     "week-06.md#9",
     "week-07.md#7"
    ],
-   "latency_ms": 928.2,
+   "latency_ms": 17.0,
    "input_tokens": 781,
    "output_tokens": 61
   },
@@ -191,7 +205,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.5,
    "status": "answered",
@@ -205,7 +220,7 @@
     "week-04.md#3",
     "week-07.md#3"
    ],
-   "latency_ms": 987.7,
+   "latency_ms": 15.0,
    "input_tokens": 861,
    "output_tokens": 81
   },
@@ -220,7 +235,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -234,7 +250,7 @@
     "project-architecture.md#15",
     "week-02.md#5"
    ],
-   "latency_ms": 998.1,
+   "latency_ms": 19.0,
    "input_tokens": 885,
    "output_tokens": 39
   },
@@ -249,7 +265,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -263,7 +280,7 @@
     "week-07.md#6",
     "week-07.md#7"
    ],
-   "latency_ms": 1456.4,
+   "latency_ms": 14.0,
    "input_tokens": 913,
    "output_tokens": 79
   },
@@ -278,7 +295,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -292,7 +310,7 @@
     "project-architecture.md#10",
     "project-architecture.md#4"
    ],
-   "latency_ms": 1162.0,
+   "latency_ms": 15.0,
    "input_tokens": 1028,
    "output_tokens": 66
   },
@@ -307,7 +325,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.5,
    "status": "answered",
@@ -321,7 +340,7 @@
     "week-04.md#6",
     "week-05.md#3"
    ],
-   "latency_ms": 1195.8,
+   "latency_ms": 17.0,
    "input_tokens": 838,
    "output_tokens": 58
   },
@@ -336,7 +355,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -351,7 +371,7 @@
     "project-architecture.md#3",
     "project-architecture.md#52"
    ],
-   "latency_ms": 980.3,
+   "latency_ms": 16.0,
    "input_tokens": 832,
    "output_tokens": 50
   },
@@ -366,7 +386,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -380,7 +401,7 @@
     "week-07.md#3",
     "week-07.md#4"
    ],
-   "latency_ms": 1728.6,
+   "latency_ms": 16.0,
    "input_tokens": 966,
    "output_tokens": 52
   },
@@ -395,7 +416,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -409,7 +431,7 @@
     "project-architecture.md#53",
     "project-architecture.md#49"
    ],
-   "latency_ms": 1332.0,
+   "latency_ms": 16.0,
    "input_tokens": 1070,
    "output_tokens": 48
   },
@@ -424,7 +446,8 @@
     "answered": false,
     "cites_gold": false,
     "generation_given_retrieval": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.5,
    "status": "not_found",
@@ -436,7 +459,7 @@
     "project-architecture.md#27",
     "week-01.md#2"
    ],
-   "latency_ms": 830.8,
+   "latency_ms": 15.0,
    "input_tokens": 863,
    "output_tokens": 22
   },
@@ -451,7 +474,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.3333333333333333,
    "status": "answered",
@@ -465,7 +489,7 @@
     "project-readme.md#7",
     "project-architecture.md#6"
    ],
-   "latency_ms": 1024.5,
+   "latency_ms": 15.1,
    "input_tokens": 788,
    "output_tokens": 34
   },
@@ -480,7 +504,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.25,
    "status": "answered",
@@ -494,7 +519,7 @@
     "project-architecture.md#25",
     "project-readme.md#0"
    ],
-   "latency_ms": 1168.2,
+   "latency_ms": 14.1,
    "input_tokens": 851,
    "output_tokens": 84
   },
@@ -509,7 +534,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -523,7 +549,7 @@
     "week-01.md#7",
     "week-05.md#7"
    ],
-   "latency_ms": 1220.5,
+   "latency_ms": 14.0,
    "input_tokens": 887,
    "output_tokens": 60
   },
@@ -538,7 +564,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -552,7 +579,7 @@
     "week-03.md#6",
     "week-04.md#5"
    ],
-   "latency_ms": 1309.4,
+   "latency_ms": 16.0,
    "input_tokens": 846,
    "output_tokens": 48
   },
@@ -567,7 +594,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 0.5,
    "status": "answered",
@@ -581,7 +609,7 @@
     "week-06.md#10",
     "week-06.md#7"
    ],
-   "latency_ms": 1199.0,
+   "latency_ms": 16.0,
    "input_tokens": 737,
    "output_tokens": 58
   },
@@ -596,7 +624,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -610,7 +639,7 @@
     "week-03.md#7",
     "week-02.md#5"
    ],
-   "latency_ms": 997.8,
+   "latency_ms": 17.0,
    "input_tokens": 796,
    "output_tokens": 39
   },
@@ -625,7 +654,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -639,7 +669,7 @@
     "week-07.md#3",
     "project-architecture.md#52"
    ],
-   "latency_ms": 1527.0,
+   "latency_ms": 16.0,
    "input_tokens": 825,
    "output_tokens": 46
   },
@@ -654,7 +684,8 @@
     "answered": true,
     "cites_gold": true,
     "generation_given_retrieval": true,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": 1.0,
    "status": "answered",
@@ -668,7 +699,7 @@
     "week-03.md#9",
     "week-04.md#3"
    ],
-   "latency_ms": 941.9,
+   "latency_ms": 16.0,
    "input_tokens": 857,
    "output_tokens": 49
   },
@@ -680,7 +711,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -692,7 +724,7 @@
     "week-07.md#0",
     "project-architecture.md#10"
    ],
-   "latency_ms": 1210.4,
+   "latency_ms": 17.0,
    "input_tokens": 939,
    "output_tokens": 22
   },
@@ -704,7 +736,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -716,7 +749,7 @@
     "project-architecture.md#8",
     "project-readme.md#4"
    ],
-   "latency_ms": 1040.1,
+   "latency_ms": 16.0,
    "input_tokens": 846,
    "output_tokens": 22
   },
@@ -728,7 +761,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -740,7 +774,7 @@
     "project-architecture.md#26",
     "project-architecture.md#57"
    ],
-   "latency_ms": 1201.0,
+   "latency_ms": 15.0,
    "input_tokens": 771,
    "output_tokens": 22
   },
@@ -752,7 +786,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -764,7 +799,7 @@
     "project-architecture.md#7",
     "project-architecture.md#6"
    ],
-   "latency_ms": 871.1,
+   "latency_ms": 16.0,
    "input_tokens": 909,
    "output_tokens": 22
   },
@@ -776,7 +811,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -788,7 +824,7 @@
     "week-03.md#5",
     "week-04.md#8"
    ],
-   "latency_ms": 978.2,
+   "latency_ms": 14.0,
    "input_tokens": 750,
    "output_tokens": 22
   },
@@ -800,7 +836,8 @@
    ],
    "flags": {
     "unsupported_answer": false,
-    "guard_triggered": false
+    "guard_triggered": false,
+    "rewritten": false
    },
    "reciprocal_rank": null,
    "status": "not_found",
@@ -812,7 +849,7 @@
     "week-04.md#8",
     "week-05.md#6"
    ],
-   "latency_ms": 939.5,
+   "latency_ms": 15.0,
    "input_tokens": 814,
    "output_tokens": 22
   }
@@ -999,6 +1036,58 @@
    }
   },
   "guard_triggered": {
+   "multi-fact": {
+    "value": 0.0,
+    "n": 3,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.5615060804490177
+    ],
+    "direction": null
+   },
+   "near-duplicate": {
+    "value": 0.0,
+    "n": 2,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.6576280471103807
+    ],
+    "direction": null
+   },
+   "near-miss": {
+    "value": 0.0,
+    "n": 6,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.3903430336530645
+    ],
+    "direction": null
+   },
+   "numeric": {
+    "value": 0.0,
+    "n": 3,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.5615060804490177
+    ],
+    "direction": null
+   },
+   "paraphrase": {
+    "value": 0.0,
+    "n": 12,
+    "successes": 0,
+    "ci": [
+     0.0,
+     0.2425007574992425
+    ],
+    "direction": null
+   }
+  },
+  "rewritten": {
    "multi-fact": {
     "value": 0.0,
     "n": 3,

@@ -14,12 +14,12 @@ def _client():
     return get_client()
 
 
-def call_model(contents, config: types.GenerateContentConfig, attempts: int = 4, purpose: str = "generate"):
+def call_model(contents, config: types.GenerateContentConfig, attempts: int = 4, purpose: str = "generate", client=None):
     """generate_content with exponential backoff on 429/503; any other error is raised immediately. `purpose` names the span (llm.route, llm.rewrite, ...)."""
     with tracing.span(f"llm.{purpose}", **{"gen_ai.operation.name": "generate_content", "gen_ai.request.model": MODEL}) as current:
         for attempt in range(1, attempts + 1):
             try:
-                response = _client().models.generate_content(model=MODEL, contents=contents, config=config)
+                response = (client or _client()).models.generate_content(model=MODEL, contents=contents, config=config)
                 tracing.annotate(current, **tracing.usage_attributes(response), **{"llm.attempts": attempt, "llm.finish_reason": finish_name(response)})
                 return response
             except (errors.ServerError, errors.ClientError) as e:

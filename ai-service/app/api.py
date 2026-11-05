@@ -29,6 +29,7 @@ from google.genai import errors as genai_errors
 from pydantic import BaseModel, Field
 
 from app import tracing
+from app.condense import MAX_HISTORY_TURNS, Turn
 from app.generation import Status
 from app.service import Service
 from app.tenants import InvalidTenant, Tenants, default_tenants
@@ -52,10 +53,18 @@ class DocumentOut(BaseModel):
     chunks: int
 
 
+class TurnIn(BaseModel):
+    """One earlier turn of the conversation, sent by the API (never by a browser) so that a follow-up can be understood."""
+
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=2000)
+
+
 class AskIn(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
     k: int = Field(default=4, ge=1, le=10, description="How many chunks to give the model")
     mode: Literal["pipeline", "agent"] = Field(default="pipeline", description="pipeline: always retrieve then answer. agent: route, then retrieve, summarize or clarify")
+    history: list[TurnIn] = Field(default_factory=list, max_length=MAX_HISTORY_TURNS, description="The latest turns of the conversation, oldest first. When present the question is rewritten to stand on its own before it is searched for.")
 
 
 class SourceOut(BaseModel):
@@ -73,6 +82,7 @@ class AskOut(BaseModel):
     sources: list[SourceOut]
     action: str = "retrieve"  # what the router chose: retrieve, summarize or clarify
     trace: list[str] = []     # the agent's steps, for debugging (empty in pipeline mode)
+    searched_for: str | None = None  # the standalone question a follow-up was rewritten into; None when the question was used as typed
 
 
 # One id per user action, sent by the .NET API in X-Request-ID and attached to every log line, so a single request can be
@@ -203,16 +213,17 @@ def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR,
 
     @app.post("/ask", response_model=AskOut)
     def ask(body: AskIn, service: Service = Depends(tenant_service)):
+        history = [Turn(t.role, t.text) for t in body.history]
         if body.mode == "agent":
-            r = service.ask_agent(body.question, body.k)
+            r = service.ask_agent(body.question, body.k, history)
             status, answer, sources, action, trace, detail = r.status, r.answer, r.sources, r.action, r.trace, "; ".join(r.trace[-1:])
         else:
-            r = service.ask(body.question, body.k)
+            r = service.ask(body.question, body.k, history)
             status, answer, sources, action, trace, detail = r.status.value, r.answer, r.sources, "retrieve", [], r.detail
         if status == "error":
             raise HTTPException(status_code=502, detail=f"The model returned no usable output ({detail}).")
         return AskOut(
-            status=status, answer=answer, action=action, trace=trace,
+            status=status, answer=answer, action=action, trace=trace, searched_for=r.searched_for,
             sources=[SourceOut(id=s.id, source=s.source, heading=s.heading, snippet=s.body[:300]) for s in sources],
         )
 

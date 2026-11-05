@@ -5,6 +5,7 @@
   python -m evals.run --suite hard --retrieval-only     retrieval metrics only, no model at all
   python -m evals.run --suite hard --judge              also judge faithfulness (after the judge passes its calibration)
   python -m evals.run --suite redteam --no-guard        what the attacks do when the output guard is switched off
+  python -m evals.run --suite followup --no-condense    answer follow-ups as typed, without rewriting them: the baseline the rewrite is measured against
   python -m evals.run --suite hard --update-baseline    accept this run as the new baseline (commit the file, with the reason in the message)
 
 Exit codes: 0 fine (or nothing to compare with), 1 a metric regressed, 2 the dataset changed so the comparison is meaningless,
@@ -44,7 +45,7 @@ def _describe(name: str, m: fw.MetricValue, base: fw.MetricValue | None, verdict
 def _print_report(report: fw.Report, comparison: fw.Comparison | None, base: fw.Report | None, out: Callable[[str], None]) -> None:
     meta, usage = report.meta, report.usage
     out(f"suite {meta['suite']} ({meta['n_cases']} cases, k={meta['k']}, {meta['mode']}) dataset {meta['fingerprint']} model {meta['model']}"
-        f"{'' if meta.get('guard', True) else '  [OUTPUT GUARD OFF]'}")
+        f"{'' if meta.get('guard', True) else '  [OUTPUT GUARD OFF]'}{'' if meta.get('condense', True) else '  [FOLLOW-UP REWRITE OFF]'}")
     out(f"  model calls: {usage['live_calls']} live, {usage['cached_calls']} cached | tokens in/out: {usage['input_tokens']}/{usage['output_tokens']}"
         f" | latency p50/p95 over {usage['latency_measured_on']} live cases: {usage['latency_ms_p50']}/{usage['latency_ms_p95']} ms")
     verdicts = {r.metric: r.verdict for r in comparison.rows} if comparison else {}
@@ -74,6 +75,7 @@ def main(argv: list[str] | None = None, *, suites=None, client=_REAL, judge_clie
     parser.add_argument("--retrieval-only", action="store_true")
     parser.add_argument("--judge", action="store_true")
     parser.add_argument("--no-guard", action="store_true", help="switch the output guard off, to see what the model does on its own")
+    parser.add_argument("--no-condense", action="store_true", help="do not rewrite follow-up questions before searching: the baseline the rewrite is measured against")
     parser.add_argument("--tolerance", type=float, default=0.10, help="how much worse (as a share of cases) a metric may get before the run fails")
     parser.add_argument("--pause", type=float, default=2.5, help="seconds between live model calls (the free tier's rate)")
     parser.add_argument("--cache", type=Path, default=DATA / "eval_answers.jsonl")
@@ -101,7 +103,7 @@ def main(argv: list[str] | None = None, *, suites=None, client=_REAL, judge_clie
         if args.no_guard:
             generation.sanitize_answer = lambda text, sources: type("Unguarded", (), {"text": text, "changed": False, "links_removed": 0, "images_removed": 0})()
         try:
-            report = fw.run_suite(suite, client=model, judge=judge, pause_s=0 if args.replay else args.pause, progress=None)
+            report = fw.run_suite(suite, client=model, judge=judge, pause_s=0 if args.replay else args.pause, progress=None, condense=not args.no_condense)
         finally:
             generation.sanitize_answer = original_guard
     except (fw.CacheMiss, fw.JudgeNotCalibrated, fw.DatasetError) as problem:

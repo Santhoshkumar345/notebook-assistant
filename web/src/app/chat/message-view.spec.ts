@@ -4,7 +4,7 @@ import type { AnswerStatus, MessageOut } from '../api/models';
 import { MessageView, STATUS_LABEL } from './message-view';
 
 const AT = '2026-10-31T09:00:00+00:00';
-const assistant = (status: AnswerStatus, text: string, sources: MessageOut['sources'] = []): MessageOut => ({ id: 2, role: 'assistant', text, status, action: 'retrieve', sources, createdAt: AT });
+const assistant = (status: AnswerStatus, text: string, sources: MessageOut['sources'] = []): MessageOut => ({ id: 2, role: 'assistant', text, status, action: 'retrieve', sources, searchedFor: null, createdAt: AT });
 
 describe('MessageView', () => {
   let fixture: ComponentFixture<MessageView>;
@@ -18,7 +18,7 @@ describe('MessageView', () => {
   }
 
   it('shows what the person asked', async () => {
-    await show({ id: 1, role: 'user', text: 'Which store is used?', status: null, action: null, sources: [], createdAt: AT });
+    await show({ id: 1, role: 'user', text: 'Which store is used?', status: null, action: null, sources: [], searchedFor: null, createdAt: AT });
 
     expect(text()).toContain('You');
     expect(text()).toContain('Which store is used?');
@@ -80,5 +80,40 @@ describe('MessageView', () => {
     expect(root().querySelector('img')).toBeNull();
     expect(root().querySelector('b')).toBeNull();
     expect(root().querySelector('.text')?.textContent).toBe('<img src=x onerror="window.pwned=1"><b>bold</b>');
+  });
+  describe('when a follow-up was rewritten before it was searched for', () => {
+    const rewritten = (status: AnswerStatus) => ({ ...assistant(status, status === 'answered' ? 'It stores vectors.' : ''), searchedFor: 'What does Chroma store?' });
+    const note = () => root().querySelector('.searched');
+
+    it('says what was searched for, so a surprising answer can be traced to the question that produced it', async () => {
+      await show(rewritten('answered'));
+
+      expect(note()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Searched for: What does Chroma store?'); // the browser draws the quotation marks around the <q>
+    });
+
+    it('says so on an answer that found nothing too, which is where it matters most', async () => {
+      await show(rewritten('not_found'));
+
+      expect(note()?.textContent).toContain('What does Chroma store?');
+    });
+
+    it('says nothing when the question was searched for as typed', async () => {
+      await show(assistant('answered', 'Chroma.'));
+
+      expect(note()).toBeNull();
+    });
+
+    it("is never drawn on the person's own turn", async () => {
+      await show({ id: 1, role: 'user', text: 'and what does it store?', status: null, action: null, sources: [], searchedFor: 'What does Chroma store?', createdAt: AT });
+
+      expect(note()).toBeNull();
+    });
+
+    it('is shown as plain text, never as markup', async () => {
+      await show({ ...assistant('answered', 'x'), searchedFor: '<img src=x onerror=alert(1)> <b>bold</b>' });
+
+      expect(root().querySelector('.searched img, .searched b')).toBeNull();
+      expect(note()?.textContent).toContain('<img src=x onerror=alert(1)>');
+    });
   });
 });

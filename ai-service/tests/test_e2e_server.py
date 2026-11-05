@@ -71,3 +71,33 @@ def test_the_fake_runs_inside_the_real_service_with_real_retrieval_and_isolated_
     assert a["status"] == "answered" and "Zephyrwood" in a["answer"]
     assert b["status"] == "answered" and "picnic" in b["answer"] and "Zephyrwood" not in b["answer"]
     assert clarify["status"] == "clarify" and clarify["answer"] == "Which topic do you mean?"
+
+
+# ----------------------------------------------------------------- follow-up questions
+
+def test_a_follow_up_starting_with_and_is_joined_to_the_last_thing_the_person_asked():
+    from app.condense import Turn
+
+    history = [Turn("user", "What is the launch codename?"), Turn("assistant", "From plans.md: ..."), Turn("user", "Who made it?"), Turn("assistant", "From plans.md: ...")]
+
+    assert e2e_server.fake_condenser("and who may learn it?", history) == "Who made it? and who may learn it?"
+
+
+def test_any_other_question_is_left_exactly_as_typed_even_in_a_conversation():
+    from app.condense import Turn
+
+    history = [Turn("user", "What is the launch codename?"), Turn("assistant", "From plans.md: ...")]
+
+    assert e2e_server.fake_condenser("What is the launch budget?", history) == "What is the launch budget?"
+
+
+def test_the_stand_in_service_uses_it_so_a_browser_test_sees_what_reached_the_service(tmp_path):
+    tenants = e2e_server.build_tenants(str(tmp_path))
+    with support.make_client(tenants=tenants) as client:
+        client.post("/documents", json={"name": "plans.md", "content": "# Plans\n\n## Codename\n\nThe launch codename is Zephyrwood and only Alice may learn it."})
+
+        reply = client.post("/ask", json={"question": "and who may learn it?", "history": [{"role": "user", "text": "What is the launch codename?"}, {"role": "assistant", "text": "Zephyrwood."}]})
+
+    body = reply.json()
+    assert body["searched_for"] == "What is the launch codename? and who may learn it?"
+    assert "[asked: What is the launch codename? and who may learn it?]" in body["answer"]

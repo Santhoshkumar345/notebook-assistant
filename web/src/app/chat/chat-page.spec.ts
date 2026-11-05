@@ -10,12 +10,12 @@ import { ChatPage } from './chat-page';
 const AT = '2026-10-31T09:00:00+00:00';
 const FROM_API = { 'X-Request-ID': 'req-42' };
 
-const user = (id: number, text: string): MessageOut => ({ id, role: 'user', text, status: null, action: null, sources: [], createdAt: AT });
-const assistant = (id: number, status: AnswerStatus, text: string, sources: MessageOut['sources'] = []): MessageOut => ({ id, role: 'assistant', text, status, action: 'retrieve', sources, createdAt: AT });
+const user = (id: number, text: string): MessageOut => ({ id, role: 'user', text, status: null, action: null, sources: [], searchedFor: null, createdAt: AT });
+const assistant = (id: number, status: AnswerStatus, text: string, sources: MessageOut['sources'] = []): MessageOut => ({ id, role: 'assistant', text, status, action: 'retrieve', sources, searchedFor: null, createdAt: AT });
 const thread = (id: string, messages: MessageOut[], title = 'Which store is used?'): ConversationOut => ({ id, title, createdAt: AT, updatedAt: AT, messages });
 const doc = (name: string, status: DocumentInfo['status'] = 'Indexed'): DocumentInfo => ({ name, chars: 10, chunks: 1, status, error: null, createdAt: AT, updatedAt: AT });
 const summary = (id: string) => ({ id, title: 'Which store is used?', messages: 2, createdAt: AT, updatedAt: AT });
-const reply = (id: string) => ({ conversationId: id, messageId: 2, status: 'answered' as const, answer: 'x', sources: [], action: 'retrieve', trace: [] });
+const reply = (id: string) => ({ conversationId: id, messageId: 2, status: 'answered' as const, answer: 'x', sources: [], action: 'retrieve', trace: [], searchedFor: null });
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve));
 

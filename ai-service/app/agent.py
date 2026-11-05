@@ -65,6 +65,7 @@ class AgentResult:
     action: str  # retrieve | summarize | clarify: what the router chose
     trace: list[str]
     model_calls: int
+    searched_for: str | None = None  # see RagResult
 
 
 class State(TypedDict):

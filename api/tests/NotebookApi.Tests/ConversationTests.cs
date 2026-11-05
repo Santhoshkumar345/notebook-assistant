@@ -71,7 +71,8 @@ public sealed class ConversationTests : IClassFixture<ApiFactory>
 
         var sent = JsonDocument.Parse(Assert.Single(Upstream.Calls).Body).RootElement;
         Assert.False(sent.TryGetProperty("conversationId", out _));
-        Assert.Equal(["question", "k", "mode"], sent.EnumerateObject().Select(p => p.Name).ToArray());
+        // a second question in a conversation also carries the earlier turns (see FollowUpTests), so the AI service can rewrite a follow-up; the id itself is never sent
+        Assert.Equal(["question", "k", "mode", "history"], sent.EnumerateObject().Select(p => p.Name).ToArray());
     }
 
     [Fact]

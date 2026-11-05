@@ -67,7 +67,7 @@ cd ai-service
 .venv\Scripts\python -m evals.run --suite hard --judge    # also judge faithfulness (after the judge passes its calibration)
 ```
 
-Suites: `basic` (25 questions over the study notes), `hard` (26 over a noisier frozen corpus), `redteam` (12 attacks).
+Suites: `basic` (25 questions over the study notes), `hard` (26 over a noisier frozen corpus), `redteam` (18 attacks, two of them hidden in an earlier *answer* of a conversation), `followup` (15 questions asked inside a conversation: 11 follow-ups and 4 standalone controls). `--no-condense` answers follow-ups as typed, the baseline the rewrite is measured against; a run with the rewrite and one without are never compared with each other.
 
 - **Datasets are fingerprinted and the corpus is frozen.** The hard set's corpus used to include the project's live README and architecture doc; a README rewrite
   silently removed two gold phrases and nothing noticed. The project documents are now frozen copies in `evals/corpus/`, `Suite.validate()` refuses a question whose

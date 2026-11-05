@@ -66,6 +66,9 @@ public sealed class ChatMessage : IOwned
 
     public string? Action { get; set; }
 
+    /// <summary>Assistant turns only: the standalone question a follow-up was rewritten into and searched for, when that differs from what the person typed.</summary>
+    public string? SearchedFor { get; set; }
+
     /// <summary>The cited sources as JSON (an array of SourceOut), kept as text so the history survives later changes to the document store.</summary>
     public string? SourcesJson { get; set; }
 

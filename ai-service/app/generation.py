@@ -52,6 +52,7 @@ class RagResult:
     answer: str
     sources: list[Hit]  # only the sources that were actually cited
     detail: str = ""
+    searched_for: str | None = None  # the standalone question a follow-up was rewritten into; None when the question was used as typed
 
 
 def escape_untrusted(text: str) -> str:

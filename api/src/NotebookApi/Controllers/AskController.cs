@@ -59,7 +59,11 @@ public sealed class AskController(IAiServiceClient ai, ConversationService conve
         if (await conversations.QuotaProblemAsync(request.ConversationId, ct) is { } quotaProblem)
             return Problem(statusCode: StatusCodes.Status403Forbidden, title: quotaProblem);
 
-        var answer = await ai.AskAsync(forAiService, ct);
+        // A follow-up is rewritten upstream into a question that stands on its own, from this person's own saved turns. Answering a clarifying question already
+        // carries its context (the combined question above), and a first question has none.
+        var history = request.AnswersClarification || request.ConversationId is not { } conversation ? null : await conversations.RecentTurnsAsync(conversation, ct);
+
+        var answer = await ai.AskAsync(forAiService, history, ct);
 
         // What is saved is what the person typed, not the combined text the AI service was given.
         var requestId = HttpContext.Items[CorrelationIdMiddleware.Header] as string;

@@ -89,11 +89,11 @@ Open http://localhost:4200, create an account, upload a Markdown file, and ask a
 
 | Layer | Command | Tests | What it covers |
 |---|---|---|---|
-| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 250 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit, tracing (and that it never records text), the output guard, the evaluation framework |
-| API | `cd api && dotnet test` | 227 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks |
-| Web | `cd web && npm test` | 284 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
-| End to end | `cd e2e && npm install && npm test` | 38 | the real stack in a real browser, two users side by side, failure and retry, an accessibility scan of every screen in light, dark and phone width, the theme toggle, and every page at five widths from 320 to 1440 px |
-| End to end, as deployed | `cd e2e && npm run test:production` | 49 | the same 38 against the **production build** served by the API, outside Development, behind a proxy that ends TLS, plus 10 about headers, caching, cookies and the policy |
+| AI service | `cd ai-service && .venv\Scripts\python -m pytest` | 301 | chunking, hybrid retrieval, grounded generation, the agent graph, the HTTP layer, tenant isolation, the service key, the request-size limit, tracing (and that it never records text), the output guard, the evaluation framework, rewriting follow-up questions |
+| API | `cd api && dotnet test` | 246 | contract and error mapping, persistence, accounts, cookies, CSRF, lock-out, rate limits, a walk over every route anonymously, two-user isolation, and what deployment needs: security headers, serving the app, forwarded headers, HSTS, quotas, the self-healing index, startup checks, the history sent with a follow-up |
+| Web | `cd web && npm test` | 289 | stores, pages, guards, interceptors, the browser-side limits (checked against the API's contract) |
+| End to end | `cd e2e && npm install && npm test` | 41 | the real stack in a real browser, two users side by side, failure and retry, an accessibility scan of every screen in light, dark and phone width, the theme toggle, and every page at five widths from 320 to 1440 px, and follow-up questions through the whole chain |
+| End to end, as deployed | `cd e2e && npm run test:production` | 52 | the same 41 against the **production build** served by the API, outside Development, behind a proxy that ends TLS, plus 10 about headers, caching, cookies and the policy |
 
 The end-to-end tests run on ports of their own and need no Gemini key: the language model is a deterministic stand-in and everything else is real ([e2e/README.md](e2e/README.md)).
 Most of the security-relevant tests were written test-first and then checked by *breaking the code on purpose* to confirm a test fails; the evidence is recorded per step in
@@ -148,7 +148,7 @@ Each is an entry in [docs/architecture.md](docs/architecture.md) with what was c
   needs an account and usually a card. Every free host sleeps or loses its disk; the API repairs a lost index by itself, but one instance is all it supports.
 - **No email.** So no verification, password reset or account deletion. Registering a taken email says so.
 - **No streaming.** An answer appears all at once, as plain text, which on the free model tier can take 5 to 45 seconds. Stop abandons the wait but not the model call.
-- **Follow-up questions are not understood from earlier turns**, except an answer to a clarifying question. A conversation is a record, not context for the model.
+- **Follow-up questions cost an extra model call.** A question like "and the second one?" is rewritten into one that stands on its own, from the last three exchanges, before it is searched for (and the page shows what was searched for). It helped 3 of 15 test questions and harmed none, which is encouraging and not proof; the details and limits are in the decision log.
 - **One model, small hand-written evaluation sets.** The measurements are evidence, not proof; each has its caveats written next to it.
 
 ## Background

@@ -169,6 +169,9 @@ namespace NotebookApi.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SearchedFor")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SourcesJson")
                         .HasColumnType("TEXT");
 
