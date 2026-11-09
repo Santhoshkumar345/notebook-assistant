@@ -211,6 +211,17 @@ def create_app(tenants: Tenants | None = None, data_dir: str = DEFAULT_DATA_DIR,
             raise HTTPException(status_code=404, detail="No such document")
         return Response(status_code=204)
 
+    @app.delete("/tenant", status_code=204)
+    def delete_tenant(request: Request, x_tenant_id: str | None = Header(default=None)):
+        """Everything this tenant has stored, gone. Called by the API when a person deletes their account, before it removes the account itself."""
+        try:
+            with tracing.span("tenant.delete"):  # no tenant id and no names: who was deleted is not recorded
+                request.app.state.tenants.delete(x_tenant_id or "")
+        except InvalidTenant:
+            raise HTTPException(status_code=400, detail="A valid X-Tenant-ID header is required.") from None
+        logger.info("tenant deleted")
+        return Response(status_code=204)
+
     @app.post("/ask", response_model=AskOut)
     def ask(body: AskIn, service: Service = Depends(tenant_service)):
         history = [Turn(t.role, t.text) for t in body.history]

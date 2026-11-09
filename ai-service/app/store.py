@@ -29,6 +29,10 @@ class VectorStore:
     def _open(self):
         return self._client.get_or_create_collection(self._name, configuration={"hnsw": {"space": "cosine"}})
 
+    def drop(self) -> None:
+        """Remove the collection itself, not just its contents: nothing of it is left in the database. The store is not usable afterwards."""
+        self._client.delete_collection(self._name)
+
     def clear(self) -> None:
         self._client.delete_collection(self._name)
         self._col = self._open()

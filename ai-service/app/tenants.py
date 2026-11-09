@@ -44,6 +44,15 @@ class Tenants:
         return service
 
 
+    def delete(self, tenant_id: str) -> None:
+        """Delete one tenant's data for good, whether or not this process has served them yet (a restart forgets the registry, not the disk). Safe to repeat."""
+        if not TENANT_ID.fullmatch(tenant_id):
+            raise InvalidTenant("A tenant id is 32 lowercase hex characters.")
+        with self._lock:
+            service = self._services.pop(tenant_id, None) or self._make(tenant_id)
+            service.destroy()
+
+
 def default_tenants(data_dir: str | None = None) -> Tenants:
     """Tenants backed by one Chroma client: persistent in `data_dir`, or in memory when it is None. Collections are named tenant_<id>."""
     client = chromadb.PersistentClient(path=data_dir) if data_dir else chromadb.EphemeralClient()

@@ -60,6 +60,11 @@ class Service:
             self._refresh()
         return removed
 
+    def destroy(self) -> None:
+        """Delete everything this tenant has stored. The service is not usable afterwards; the tenants registry forgets it."""
+        with self._write_lock:
+            self._store.drop()
+
     def documents(self) -> dict[str, int]:
         return self._store.source_counts()
 
