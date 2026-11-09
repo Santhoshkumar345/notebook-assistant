@@ -82,7 +82,7 @@ cd api && dotnet run --project src/NotebookApi --urls http://127.0.0.1:5247
 cd web && npm install && npm start
 ```
 
-Open http://localhost:4200, create an account, upload a Markdown file, and ask about it. Registration can be restricted to people with a code:
+Open http://localhost:4200, create an account, upload a Markdown file, and ask about it. [test-documents/](test-documents/README.md) has small documents with known facts, questions to ask and what a correct answer looks like (including one with a hidden prompt-injection attack, and files the app should refuse). Registration can be restricted to people with a code:
 `dotnet user-secrets set "Auth:InviteCode" "<a code>" --project api/src/NotebookApi`.
 
 ## Tests
